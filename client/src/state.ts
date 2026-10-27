@@ -41,6 +41,8 @@ export const S = {
   zone: 0,
   focusInfo: null as null | { id: number; key: string; lvl: number; hp: number; shiny: boolean; flags: number; status?: number },
   waypoint: null as Waypoint | null,
+  route: null as { x: number; y: number }[] | null,   // ruta guiada hasta S.waypoint (se recalcula sola)
+  routeLen: 0,
   gym: null as null | { id: number; end: number; left: number; total: number },
   trade: null as any,
   rank: null as null | Record<string, { n: string; v: number }[]>,

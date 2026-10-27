@@ -1,6 +1,7 @@
 // Objetos del mundo: árboles, rocas, edificios, cofres... (pixel art por código)
 import { PixelArt, shade, phash } from './pixel';
 import { natureArt } from './nature3d';
+import { townArt } from './townArt';
 
 const K = '#18101e';
 const SH = '#00000048';
@@ -222,6 +223,8 @@ function furniture(kind: string, v: number): PixelArt | null {
 }
 
 export function objectArt(kind: string, v: number): PixelArt {
+  const hi = townArt(kind, v);
+  if (hi) return hi;
   const f = furniture(kind, v);
   if (f) return f;
   switch (kind) {

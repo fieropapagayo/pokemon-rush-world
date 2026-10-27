@@ -48,7 +48,7 @@ export class Panels {
   teamSel: string | null = null;
   teamFilter = ''; teamSort: 'lvl' | 'cp' | 'iv' | 'dex' | 'new' = 'lvl';
   teamTypeFilter = 'all';
-  dexSel: string | null = null; dexShiny = false; dexFilter = ''; dexTab: 'all' | 'caught' | 'missing' | 'shiny' | 'legend' | 'season' = 'all';
+  dexSel: string | null = null; dexShiny = false; dexFilter = ''; dexTypeFilter = ''; dexTab: 'all' | 'caught' | 'missing' | 'shiny' | 'legend' | 'season' = 'all';
   viewDir = 1; viewPose: 'idle' | 'walk' | 'attack' = 'walk'; viewSpin = false; viewStep = 0; trainerDir = 0;
   upgTab: 'core' | 'auto' | 'affinity' = 'core';
   invTab: 'all' | 'ball' | 'heal' | 'evo' | 'special' = 'all';
@@ -242,21 +242,54 @@ export class Panels {
             ${links.length ? links.map(l => { const d = LINK_MAP[l.id]; return `<div class="linkrow"><span class="sw" style="background:${d.color}"></span><div><b>${d.name}${l.tier === 2 ? ' II' : ''}</b> <span class="muted">(${l.members.length} miembros)</span><div class="muted" style="font-size:12px">${esc(d.desc)}</div></div></div>`; }).join('') : '<div class="muted" style="font-size:12px;padding:2px 0">Ninguno. Equipa 2+ del mismo tipo, familia o 5 tipos distintos.</div>'}
             ${linkPresets.length ? `<details style="margin-top:4px;padding-top:4px;border-top:1px solid #ffffff14"><summary style="cursor:pointer;font-size:11px;color:#ffd866">⚡ Armar sinergia en 1 clic (${linkPresets.length} disponibles)</summary><div class="row" style="gap:4px;flex-wrap:wrap;margin-top:4px">${linkPresets.map(p => `<button class="btn tiny ${links.some(l => l.id === p.id) ? 'gold' : 'gray'}" data-buildlink="${p.id}" style="border-left:3px solid ${p.color};font-size:10px;padding:1px 6px" title="${esc(p.desc)}">${esc(p.name)}</button>`).join('')}</div></details>` : ''}
           </div>
-          <div class="row" style="margin:4px 0;flex-wrap:wrap">
-            <input id="tf" placeholder="Buscar nombre, mote o tipo" value="${esc(this.teamFilter)}" style="flex:1;padding:4px;background:#10141f;color:#fff;border:2px solid #000;border-radius:3px" />
-            <button class="btn tiny ${this.teamSort === 'lvl' ? 'gold' : 'gray'}" data-sort="lvl">Nivel</button><button class="btn tiny ${this.teamSort === 'cp' ? 'gold' : 'gray'}" data-sort="cp">Poder</button><button class="btn tiny ${this.teamSort === 'iv' ? 'gold' : 'gray'}" data-sort="iv">% IV</button><button class="btn tiny ${this.teamSort === 'dex' ? 'gold' : 'gray'}" data-sort="dex">Nº</button><button class="btn tiny ${this.teamSort === 'new' ? 'gold' : 'gray'}" data-sort="new">Recientes</button>
-            <button class="btn tiny red" id="tdup" title="Transfiere los repetidos (no shiny, no favoritos, fuera del equipo) conservando el de mayor nivel de cada especie">Transferir repetidos</button>
+          <div class="row" style="margin:4px 0 6px;gap:4px;flex-wrap:wrap;align-items:center">
+            <input id="tf" placeholder="🔍 Buscar..." value="${esc(this.teamFilter)}" style="flex:1 1 110px;min-width:80px;padding:3px 6px;background:#10141f;color:#fff;border:1px solid #334455;border-radius:4px;font-size:11px" />
+            <select id="tsort" style="background:#10141f;color:#ffd866;border:1px solid #334455;border-radius:4px;padding:2px 4px;font-size:11px">
+              <option value="lvl" ${this.teamSort === 'lvl' ? 'selected' : ''}>Nivel</option>
+              <option value="cp" ${this.teamSort === 'cp' ? 'selected' : ''}>Poder (PC)</option>
+              <option value="iv" ${this.teamSort === 'iv' ? 'selected' : ''}>% IV</option>
+              <option value="dex" ${this.teamSort === 'dex' ? 'selected' : ''}>Nº</option>
+              <option value="new" ${this.teamSort === 'new' ? 'selected' : ''}>Recientes</option>
+            </select>
+            <select id="tfilter-type" style="background:#10141f;color:#a8e0ff;border:1px solid #334455;border-radius:4px;padding:2px 4px;font-size:11px">
+              <option value="all">Tipo...</option>
+              ${Object.entries(TYPE_NAMES).map(([k, v]) => `<option value="${k}" ${this.teamTypeFilter === k ? 'selected' : ''}>${v}</option>`).join('')}
+            </select>
+            <select id="tfilter-rar" style="background:#10141f;color:#ffcf3f;border:1px solid #334455;border-radius:4px;padding:2px 4px;font-size:11px">
+              <option value="all" ${!this.teamTypeFilter.startsWith('r_') ? 'selected' : ''}>Rareza...</option>
+              <option value="r_legend" ${this.teamTypeFilter === 'r_legend' ? 'selected' : ''}>👑 Legendarios</option>
+              <option value="r_epic" ${this.teamTypeFilter === 'r_epic' ? 'selected' : ''}>Épicos</option>
+              <option value="r_rare" ${this.teamTypeFilter === 'r_rare' ? 'selected' : ''}>Raros</option>
+              <option value="r_uncommon" ${this.teamTypeFilter === 'r_uncommon' ? 'selected' : ''}>Poco comunes</option>
+              <option value="r_common" ${this.teamTypeFilter === 'r_common' ? 'selected' : ''}>Comunes</option>
+            </select>
+            <div class="row" style="gap:2px">
+              <button class="btn tiny ${this.teamTypeFilter === 'all' && !this.teamFilter ? 'on' : 'gray'}" data-tfilter="all" title="Ver todos">Todos</button>
+              <button class="btn tiny ${this.teamTypeFilter === 'fav' ? 'on' : 'gray'}" data-tfilter="fav" title="Solo Favoritos">⭐</button>
+              <button class="btn tiny ${this.teamTypeFilter === 'shiny' ? 'on' : 'gray'}" data-tfilter="shiny" title="Solo Shinies">✦</button>
+              <button class="btn tiny ${this.teamTypeFilter === 'elite' ? 'on' : 'gray'}" data-tfilter="elite" title="Élite 85%+ IV">★</button>
+              <button class="btn tiny ${this.teamTypeFilter === 'evo' ? 'on' : 'gray'}" data-tfilter="evo" title="Listos para evolucionar">▲</button>
+            </div>
+            <button class="btn tiny red" id="tdup" title="Transfiere los repetidos conservando el mejor de cada especie">♻ Repetidos</button>
           </div>
-          <div class="row" style="gap:3px;margin:4px 0 6px;flex-wrap:wrap">
-            ${[['all', 'Todos'], ['fav', '⭐ Favoritos'], ['shiny', '✦ Shinies'], ['elite', '★ Élite IV'], ['evo', '▲ Evoluciona'], ['grass', 'Planta'], ['fire', 'Fuego'], ['water', 'Agua'], ['electric', 'Eléctrico'], ['normal', 'Normal'], ['psychic', 'Psíquico'], ['ghost', 'Fantasma'], ['rock', 'Roca'], ['dragon', 'Dragón']].map(([k, n]) => `<button class="btn tiny ${this.teamTypeFilter === k ? 'on' : 'gray'}" data-tfilter="${k}" style="font-size:10px;padding:2px 6px">${n}</button>`).join('')}
-          </div>
-          <div class="row" style="gap:3px;margin:-2px 0 6px;flex-wrap:wrap"><span class="muted" style="font-size:11px">Rareza:</span>${[['r_legend', '👑 Legendarios y míticos', '#ffcf3f'], ['r_epic', 'Épicos', '#d07cff'], ['r_rare', 'Raros', '#5fb4ff'], ['r_uncommon', 'Poco comunes', '#7ee07e'], ['r_common', 'Comunes', '#c8c8c8']].map(([k, n, col]) => `<button class="btn tiny ${this.teamTypeFilter === k ? 'on' : 'gray'}" data-tfilter="${k}" style="font-size:10px;padding:2px 6px;border-left:3px solid ${col}">${n}</button>`).join('')}</div>
           <div class="grid boxgrid">${list.map(m => { const sp = SPECIES[m.sp]; const inT = c.team.includes(m.uid); const cp = monCP(sp, m.lvl, m.iv); return `<div class="card boxcell ${inT ? 'inteam' : ''} ${busy.has(m.uid) ? 'exp' : ''} ${this.teamSel === m.uid ? 'sel' : ''}" data-uid="${m.uid}" title="${esc(m.nick ? `${m.nick} (${sp.name})` : sp.name)} Nv.${m.lvl} · PC ${cp}${busy.has(m.uid) ? ' (en expedición)' : ''}">${m.shiny ? '<span class="s">✦</span>' : m.fav ? '<span class="s">⭐</span>' : ''}${inT ? '<span class="t">EQ</span>' : ''}<img src="${monURL(m.sp, m.shiny, 1)}">${m.fav && m.shiny ? '⭐ ' : ''}${esc(m.nick || sp.name)}<br><span class="muted">Nv.${m.lvl} · PC ${cp}</span></div>`; }).join('')}</div>
           <div class="muted" style="font-size:12px;margin-top:4px">${S.mons.length} Pokémon en total.</div>
         </div>
         <div style="flex:1 1 300px;min-width:280px" id="mondetail">${sel ? this.monDetail(sel, busy.has(sel.uid)) : '<div class="card muted" style="padding:20px;text-align:center">Selecciona un Pokémon para ver su ficha, evolucionarlo o mejorarlo.</div>'}</div>
       </div>`;
-    body.querySelectorAll<HTMLElement>('[data-uid]').forEach(d => d.onclick = () => { this.teamSel = d.dataset.uid!; audio.play('ui'); this.renderTeam(body); });
+    body.querySelectorAll<HTMLElement>('[data-uid]').forEach(d => d.onclick = () => {
+      this.teamSel = d.dataset.uid!;
+      const ms = monByUid(this.teamSel);
+      if (ms) audio.cry(SPECIES[ms.sp].dex - 1);
+      else audio.play('ui');
+      this.renderTeam(body);
+    });
+    const sSort = body.querySelector('#tsort') as HTMLSelectElement | null;
+    if (sSort) sSort.onchange = () => { this.teamSort = sSort.value as any; this.renderTeam(body); };
+    const sType = body.querySelector('#tfilter-type') as HTMLSelectElement | null;
+    if (sType) sType.onchange = () => { this.teamTypeFilter = sType.value; this.renderTeam(body); };
+    const sRar = body.querySelector('#tfilter-rar') as HTMLSelectElement | null;
+    if (sRar) sRar.onchange = () => { this.teamTypeFilter = sRar.value; this.renderTeam(body); };
     body.querySelectorAll<HTMLElement>('[data-sort]').forEach(d => d.onclick = () => { this.teamSort = d.dataset.sort as any; this.renderTeam(body); });
     body.querySelectorAll<HTMLElement>('[data-tfilter]').forEach(d => d.onclick = () => { this.teamTypeFilter = d.dataset.tfilter!; this.renderTeam(body); });
     body.querySelectorAll<HTMLElement>('[data-buildlink]').forEach(b => b.onclick = () => {
@@ -497,6 +530,7 @@ export class Panels {
       if (this.dexTab === 'shiny' && !d.shiny[s.key]) return false;
       if (this.dexTab === 'legend' && s.rarity !== 'legendary' && s.rarity !== 'mythic') return false;
       if (this.dexTab === 'season' && !curSeasonKeys.has(s.key)) return false;
+      if (this.dexTypeFilter && !s.types.includes(this.dexTypeFilter as any)) return false;
       if (!search) return true;
       const nameMatch = isS && s.name.toLowerCase().includes(search);
       const dexMatch = String(s.dex).includes(search) || `#${String(s.dex).padStart(3, '0')}`.includes(search);
@@ -508,15 +542,26 @@ export class Panels {
       <div class="row" style="gap:4px;margin-bottom:6px;flex-wrap:wrap">
         ${[['all', `Todos (${SPECIES_LIST.length})`], ['caught', `✔ Capturados (${caught})`], ['missing', `？ Faltan (${SPECIES_LIST.length - caught})`], ['shiny', `✦ Shiny (${shiny})`], ['legend', '★ Leyendas'], ['season', `${SEASON_ICONS[curSeason]} ${SEASON_NAMES[curSeason]}`]].map(([k, n]) => `<button class="btn tiny ${this.dexTab === k ? 'gold' : 'gray'}" data-dtab="${k}" style="font-size:10px;padding:2px 6px">${n}</button>`).join('')}
       </div>
-      <div class="row" style="margin-bottom:6px">
-        <input id="df" placeholder="Buscar por nombre, número o tipo…" value="${esc(this.dexFilter)}" style="flex:1;padding:4px 8px;background:#10141f;color:#fff;border:2px solid #000;border-radius:3px;font-size:12px" />
-        ${this.dexFilter ? `<button class="btn tiny gray" id="dfclear" style="margin-left:4px">✕</button>` : ''}
+      <div class="row" style="margin-bottom:6px;gap:4px">
+        <input id="df" placeholder="Buscar por nombre, número o tipo…" value="${esc(this.dexFilter)}" style="flex:1;min-width:140px;padding:4px 8px;background:#10141f;color:#fff;border:1px solid #334455;border-radius:3px;font-size:12px" />
+        <select id="df-type" style="background:#10141f;color:#a8e0ff;border:1px solid #334455;border-radius:3px;padding:3px 6px;font-size:11px">
+          <option value="" ${!this.dexTypeFilter ? 'selected' : ''}>Todos los tipos</option>
+          ${Object.entries(TYPE_NAMES).map(([k, v]) => `<option value="${k}" ${this.dexTypeFilter === k ? 'selected' : ''}>${v}</option>`).join('')}
+        </select>
+        ${(this.dexFilter || this.dexTypeFilter) ? `<button class="btn tiny gray" id="dfclear" title="Limpiar filtros" style="padding:2px 8px">✕</button>` : ''}
       </div>
       <div class="row" style="align-items:flex-start;gap:12px;flex-wrap:wrap">
         <div class="grid dexgrid" style="flex:1 1 420px">${filteredList.length ? filteredList.map(s => { const C = !!d.caught[s.key], V = !!d.seen[s.key]; return `<div class="card dexcell ${C ? '' : V ? 'seen' : 'unseen'} ${this.dexSel === s.key ? 'sel' : ''}" data-dx="${s.key}"><img src="${monURL(s.key, false, 2)}">#${String(s.dex).padStart(3, '0')}<br>${C || V ? esc(s.name) : '???'}${d.shiny[s.key] ? ' <span class="gold">✦</span>' : ''}</div>`; }).join('') : '<div class="card muted" style="padding:16px;text-align:center;grid-column:1/-1">No se encontraron especies coincidentes.</div>'}</div>
         <div style="flex:1 1 300px">${detail}</div>
       </div>`;
-    body.querySelectorAll<HTMLElement>('[data-dx]').forEach(x => x.onclick = () => { this.dexSel = x.dataset.dx!; this.dexShiny = false; audio.play('ui'); this.renderDex(body); });
+    body.querySelectorAll<HTMLElement>('[data-dx]').forEach(x => x.onclick = () => {
+      this.dexSel = x.dataset.dx!;
+      this.dexShiny = false;
+      const sp = SPECIES[this.dexSel];
+      if (sp) audio.cry(sp.dex - 1);
+      else audio.play('ui');
+      this.renderDex(body);
+    });
     const sb = body.querySelector('#dshiny') as HTMLElement | null; if (sb) sb.onclick = () => { this.dexShiny = !this.dexShiny; audio.play('sparkle'); this.renderDex(body); };
     const dbx = body.querySelector('#dexbox') as HTMLElement | null;
     if (dbx && sel) dbx.onclick = () => {
@@ -544,8 +589,16 @@ export class Panels {
       };
       df.onkeydown = e => e.stopPropagation();
     }
+    const dft = body.querySelector('#df-type') as HTMLSelectElement | null;
+    if (dft) {
+      dft.onchange = () => {
+        this.dexTypeFilter = dft.value;
+        audio.play('ui');
+        this.renderDex(body);
+      };
+    }
     const dfc = body.querySelector('#dfclear') as HTMLElement | null;
-    if (dfc) dfc.onclick = () => { this.dexFilter = ''; this.renderDex(body); };
+    if (dfc) dfc.onclick = () => { this.dexFilter = ''; this.dexTypeFilter = ''; audio.play('ui'); this.renderDex(body); };
   }
 
   // =================================================================== MOCHILA
@@ -710,6 +763,11 @@ export class Panels {
       return `<details class="card" ${qMap ? 'open' : ''} style="font-size:13px;${known ? '' : 'opacity:.65'}"><summary class="row" style="cursor:pointer"><b class="grow">${known ? esc(z.name) : 'Zona sin descubrir'} ${known ? `<span class="muted" style="font-weight:400;font-size:11px">${WEATHER_ICONS[zw]} ${WEATHER_NAMES[zw]}</span>` : ''}</b><span style="color:${dc}">Nv.${z.lvl[0]}-${z.lvl[1]} · ${dn}</span><span>${got}/${sp.length}</span><button class="btn tiny" data-route="${z.id}" title="Marcar dirección hacia ${esc(z.name)}">Ir ↗</button></summary>${known ? `<div class="zone-info">${icons}</div>` : '<div class="muted" style="margin-top:6px">Descúbrela para ver qué Pokémon viven aquí.</div>'}</details>`;
     }).join('');
     if (S.waypoint && S.waypoint.x < 400) marks.push(`<div class="wm-mark" style="${pct(S.waypoint.x, S.waypoint.y)};color:#ffe5a4">◎ ${esc(S.waypoint.name)}</div>`);
+    if (S.route && S.route.length > 1 && S.route[0].x < 400) {
+      const pts = S.route.filter((_, i) => i % 3 === 0 || i === S.route!.length - 1).map(p => `${(p.x / 4).toFixed(2)},${(p.y / 4).toFixed(2)}`).join(' ');
+      marks.push(`<svg class="wm-route" viewBox="0 0 100 100" preserveAspectRatio="none"><polyline points="${pts}" fill="none" stroke="#2a1a00" stroke-opacity=".7" stroke-width="1.3" vector-effect="non-scaling-stroke" style="stroke-width:5px"/><polyline points="${pts}" fill="none" stroke="#ffd860" stroke-dasharray="6 4" vector-effect="non-scaling-stroke" style="stroke-width:2.5px"/></svg>`);
+      marks.push(`<div class="wm-mark" style="${pct(S.waypoint!.x, S.waypoint!.y)};color:#ffd860;transform:translate(-50%,-140%)">📍 ${Math.round(S.routeLen)} m</div>`);
+    }
     const lastTown = c.towns.length ? w.towns.find(t => t.id === c.towns[c.towns.length - 1]) : null;
     const bossRows = S.bosses.filter(b => b.x < 400).map((b, idx) => {
       const spKey = b.sp || Object.keys(SPECIES).find(k => (b.name || '').toLowerCase().includes(SPECIES[k].name.toLowerCase())) || 'snorlax';

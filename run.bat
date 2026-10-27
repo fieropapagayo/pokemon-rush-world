@@ -98,6 +98,19 @@ if errorlevel 1 (
 
 REM ---------- 6. Web en Cloudflare (se publica sola si cambia la carpeta web) ----------
 if exist "web\autodeploy.mjs" node web\autodeploy.mjs
+REM ---------- 6b. Servidor 24 h en Render (si ya ejecutaste subir-a-render.bat) ----------
+if exist "scripts\auto-push.mjs" node scripts\auto-push.mjs
+set JUGAR_EN_NUBE=false
+for /f "usebackq tokens=1,2 delims==" %%a in (".env") do (
+  if /i "%%a"=="JUGAR_EN_NUBE" set JUGAR_EN_NUBE=%%b
+)
+if /i "!JUGAR_EN_NUBE!"=="true" (
+  echo.
+  echo  Abriendo el juego de la nube ^(servidor 24 h, no hace falta este PC^)...
+  start "" "https://pokemon-rush-world.pokemonrush.workers.dev/jugar"
+  timeout /t 4 >nul
+  exit /b 0
+)
 
 REM ---------- 7. Arrancar servidor + abrir navegador ----------
 echo.

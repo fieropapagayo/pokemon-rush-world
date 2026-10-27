@@ -895,7 +895,7 @@ export class Game {
       const oldSpecial = tm.special?.id, oldBasic = tm.basic.id;
       tm.lvl = ms.lvl; tm.recalc(false);
       tm.hp = Math.min(tm.maxHp, tm.hp + tm.maxHp * 0.2);
-      this.emit(tm.x, tm.y, ['lv', tm.id]);
+      this.emit(tm.x, tm.y, ['lv', tm.id, ms.lvl]);
       const newMove = tm.special?.id !== oldSpecial ? tm.special?.name : tm.basic.id !== oldBasic ? tm.basic.name : null;
       const evo = (tm.sp.evo || []).find(e => e.level && ms.lvl >= e.level);
       p.send({ t: 'mlv', uid: ms.uid, lvl: ms.lvl, move: newMove, evo: evo ? evo.to : null });

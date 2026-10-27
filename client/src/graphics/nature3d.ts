@@ -1,9 +1,10 @@
 // High-resolution environment models, rendered at half scale in the tile world.
+import { HIRES_KINDS } from './townArt';
 import { renderSolids, type SolidPart, type Material } from './solid';
 import { phash, shade } from './pixel';
 
 export const NATURE_KINDS = new Set(['tree', 'rock', 'boulder', 'bush']);
-export function objectScale(kind: string) { return NATURE_KINDS.has(kind) ? 0.5 : 1; }
+export function objectScale(kind: string) { return NATURE_KINDS.has(kind) || HIRES_KINDS.has(kind) ? 0.5 : 1; }
 
 export function natureArt(kind: string, variant: number) {
   const p: SolidPart[] = [];

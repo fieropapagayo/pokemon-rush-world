@@ -6,7 +6,9 @@ import { hasExtraModel, extraParts } from './newmons';
 import { PixelArt } from './pixel';
 import { renderSolids, EMISSIVE_COLORS, type SolidPart, type Material } from './solid';
 
-export const MON_FRAME = 64;
+/** Resolución de los modelos: 1,5× (96 px por fotograma) y se dibujan con filtrado suave. */
+export const MON_RES = 1.5;
+export const MON_FRAME = 64 * MON_RES;
 export const MON_WORLD_SIZE = 40;
 export const MON_POSES = 8; // idle 0–1, gait 2–5, attack 6–7
 type V = [number, number, number];
@@ -717,11 +719,11 @@ export function speciesMaterial(key: string): Material {
   if (['eevee', 'growlithe', 'vulpix', 'ponyta', 'rattata', 'pikachu', 'meowth', 'mankey', 'pidgey'].includes(sp.family) || ['mareep', 'swinub', 'houndour', 'entei', 'raikou'].includes(key)) return 'fur';
   return 'smooth';
 }
-export function renderMon3D(key: string, shiny = false, direction = 1, frame = 0): PixelArt {
+export function renderMon3D(key: string, shiny = false, direction = 1, frame = 0, res = MON_RES): PixelArt {
   const sp = SPECIES[key];
   const material = speciesMaterial(key);
   const parts = modelParts(key, shiny, frame).map(p => ({ ...p, material: p.material || (EMISSIVE_COLORS.has(p.color) ? 'energy' as Material : Math.max(...p.r) <= 1.7 ? 'smooth' as Material : undefined) }));
-  return renderSolids(parts, { width: MON_FRAME, height: MON_FRAME, yaw: direction * Math.PI / 4,
+  return renderSolids(parts, { width: Math.round(64 * res), height: Math.round(64 * res), pixelScale: 1.52 * res, yaw: direction * Math.PI / 4,
     material, rocky: ['onix', 'geodude', 'graveler', 'golem', 'metapod'].includes(key),
     metallic: sp.types.includes('steel') || key === 'onix', glossy: sp.types.includes('water') || sp.family === 'voltorb' || sp.types.includes('dragon'),
     ghost: sp.types.includes('ghost'), shiny });

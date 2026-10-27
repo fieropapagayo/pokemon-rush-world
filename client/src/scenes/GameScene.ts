@@ -18,7 +18,7 @@ import { f3 } from '../graphics/font';
 import { FX, hex } from '../systems/fx';
 import { audio, Mood } from '../systems/audio';
 import { Visuals } from '../systems/visuals';
-import { findWalkPath, type Point } from '../systems/navigation';
+import { findWalkPath, findRoute, nearestOnRoute, routeLength, type Point } from '../systems/navigation';
 import { encounterTier, type Tier } from '../../../shared/encounters';
 import { weatherAt, seasonAt } from '../../../shared/weather';
 import { npcPos } from '../../../shared/world/npcwalk';
@@ -199,6 +199,7 @@ export class GameScene extends Phaser.Scene {
     this.unsub.push(bus.on('select_target', (id: number) => this.setFocus(id)));
     this.unsub.push(bus.on('fight_target', (id: number) => this.setFocus(id, true)));
     this.unsub.push(bus.on('cancel_walk', () => { this.walkPath = []; }));
+    this.unsub.push(bus.on('auto_route', () => { if (S.route?.length) { this.walkPath = S.route.map(p => ({ x: p.x, y: p.y })); this.pathStuck = 0; bus.emit('toast', { text: 'Caminando hacia ' + (S.waypoint?.name || 'el destino') + '… (pulsa cualquier dirección para parar)', kind: 'info' }); } }));
     this.unsub.push(net.on('tp', () => { this.walkPath = []; }));
     this.events.on('shutdown', () => { window.removeEventListener('keydown', this.onKey); this.unsub.forEach(u => u()); });
     this.inited = true;
@@ -276,6 +277,7 @@ export class GameScene extends Phaser.Scene {
   makeObj(o: WObj): Phaser.GameObjects.GameObject {
     const key = `obj:${o.k}:${o.v}`;
     if (o.k === 'cave') return this.add.image((o.x + 0.5) * PX, (o.y + 1) * PX + 2, key).setOrigin(0.5, 1).setDepth(-35);
+    if (o.k === 'flowerpatch') return this.add.image((o.x + 0.5) * PX, (o.y + 1) * PX, key).setOrigin(0.5, 1).setScale(0.5).setDepth(-34);
     if (o.k === 'rug' || o.k === 'window') return this.add.image((o.x + o.w / 2) * PX, (o.y + o.h) * PX, key).setOrigin(0.5, 1).setDepth(-36);
     const building = ['center', 'mart', 'house', 'lab', 'fountain', 'tower'].includes(o.k);
     const bottom = (o.y + o.h) * PX;
@@ -326,6 +328,7 @@ export class GameScene extends Phaser.Scene {
     else if (k === 'f') bus.emit('flee');
     else if (k === 'v') bus.emit('cycle_stance');
     else if (k === 'z') net.send({ t: 'camp' });
+    else if (k === 'q') bus.emit('quick_potion');
   };
 
   inputVec() {
@@ -400,6 +403,8 @@ export class GameScene extends Phaser.Scene {
     const msg = ['<3 ¡FELIZ!', '<3 ¡CONTENTO!', '<3 ¡ANIMADO!', '<3 ¡LEAL!'][Math.floor(Math.random() * 4)];
     this.fx.floatText(px, py - 10, msg, 0xff78a8, 1, 'f3', 900, 16);
     audio.play('sparkle', { pitch: 1.15 });
+    const sp = SPECIES[v.key];
+    if (sp) audio.cry(sp.dex - 1);
     const tl = S.team.find(t => t.eid === v.id);
     const ms = tl ? S.mons.find(m => m.uid === tl.uid) : null;
     const nm = ms?.nick || SPECIES[v.key]?.name || v.key;
@@ -692,7 +697,7 @@ export class GameScene extends Phaser.Scene {
           const v = this.mons.get(id);
           if (v) {
             v.flash = 120;
-            if (flags & 1) { this.fx.hitSpark(p!.x, p!.y, 'normal', true); this.cameras.main.shake(80, 0.0018); }
+            if (flags & 1) { this.fx.hitSpark(p!.x, p!.y, 'normal', true); this.cameras.main.shake(80, 0.0018); audio.play('crit'); } else if (flags & 2) { this.fx.hitSpark(p!.x, p!.y, 'electric', false); audio.play('hit', { pitch: 1.25, vol: 0.85 }); } else if (flags & 4) { audio.play('hit', { pitch: 0.8, vol: 0.6 }); }
             if (v.owner !== S.myId && Math.hypot(v.x - this.me.x, v.y - this.me.y) < 16) {
               const nowMs = Date.now();
               const hits: { t: number; d: number }[] = ((S as any)._dmgHits ||= []);
@@ -741,7 +746,24 @@ export class GameScene extends Phaser.Scene {
         if (who === S.myId) audio.play('chest');
         break;
       }
-      case 'lv': { const p = this.viewPos(e[1]); if (p) { this.fx.ring(p.x, p.y + 8, '#ffe060', 24, 600); this.fx.floatText(p.x, p.y - 10, '¡NIVEL!', 0xffe060, 1, 'f3', 1000, 20); const v = this.mons.get(e[1]); if (v?.owner === S.myId) audio.play('levelup'); } break; }
+      case 'lv': {
+        const p = this.viewPos(e[1]);
+        if (p) {
+          const v = this.mons.get(e[1]);
+          const lvlTxt = e[2] ? `¡Nv. ${e[2]}!` : '¡NIVEL!';
+          this.fx.ring(p.x, p.y + 8, '#ffe060', 28, 650);
+          this.fx.burst(p.x, p.y - 10, '#ffe060', 14, 'star', { speed: { min: 25, max: 75 }, lifespan: 750 });
+          this.fx.floatText(p.x, p.y - 14, lvlTxt, 0xffe060, 1.1, 'f3', 1100, 24);
+          if (v?.owner === S.myId) {
+            audio.play('levelup');
+            this.time.delayedCall(220, () => {
+              const curP = this.viewPos(e[1]);
+              if (curP) this.fx.floatText(curP.x, curP.y - 24, '+PS +ATK +DEF', 0x88ff88, 0.9, 'f3', 900, 16);
+            });
+          }
+        }
+        break;
+      }
       case 'ev': { const p = this.viewPos(e[1]); if (p) { this.fx.disc(p.x, p.y, '#ffffff', 40, 900, 0.9); this.fx.burst(p.x, p.y, '#ffffff', 20, 'star'); } break; }
       case 'sk': this.skillFx(e); break;
       case 'em': this.emote(e[1], e[2]); break;
@@ -1073,6 +1095,7 @@ export class GameScene extends Phaser.Scene {
             this.visuals?.footprint(m.x, m.y, m.dir, terr === T.SNOW || this.zoneId === 16);
           } else if (terr === T.WATER || terr === T.SWAMP) {
             this.fx.ripple(m.x * PX, m.y * PX, '#a0d8ff', 10, 320);
+            this.fx.burst(m.x * PX, m.y * PX - 2, '#c0e8ff', 2, 'dot', { speed: { min: 4, max: 14 }, gravityY: 20, lifespan: 220, scale: { start: 0.6, end: 0.1 } });
           } else if (!this.fx.low && (terr === T.PATH || terr === T.ROCK || terr === T.CLIFF)) {
             this.fx.burst(m.x * PX, m.y * PX, '#c0b098', 1, 'dot', { speed: { min: 2, max: 10 }, lifespan: 180, scale: { start: 0.6, end: 0.1 } });
           }
@@ -1101,8 +1124,11 @@ export class GameScene extends Phaser.Scene {
     for (const v of this.mons.values()) this.drawMon(v, rt, time);
     // objetivo
     const fv = this.mons.get(S.me.focus);
-    if (fv && !fv.dead) { this.selRing.setVisible(true).setPosition(fv.x * PX, fv.y * PX + 1).setScale(fv.size * fv.base / 36); this.selRing.setAlpha(0.6 + Math.sin(time / 150) * 0.3); }
-    else this.selRing.setVisible(false);
+    if (fv && !fv.dead) {
+      const ringCol = fv.shiny ? 0xffd700 : S.me.fight ? 0xff4040 : 0x60d8ff;
+      this.selRing.setTint(ringCol).setVisible(true).setPosition(fv.x * PX, fv.y * PX + 1).setScale(fv.size * fv.base / 36);
+      this.selRing.setAlpha(0.65 + Math.sin(time / 150) * 0.25);
+    } else this.selRing.setVisible(false);
     // pista de interacción
     const it = this.nearInteractable();
     if (it) this.hint.setVisible(true).setText('[E] ' + it.label).setPosition(m.x * PX, m.y * PX - 33);
@@ -1197,15 +1223,86 @@ export class GameScene extends Phaser.Scene {
       const end = this.walkPath[this.walkPath.length - 1];
       g.lineStyle(1, 0xd3efaf, 0.8); g.strokeCircle(end.x * PX, end.y * PX, 5 + Math.sin(time / 180));
     }
+    this.drawRoute(g, time);
+  }
+
+  beaconGfx!: Phaser.GameObjects.Graphics;
+  routeKey = ''; routeAt = 0; routeFails = 0;
+  /** Ruta guiada: se recalcula cuando cambias de destino o te sales del camino, y se dibuja como flechas en el suelo. */
+  drawRoute(g: Phaser.GameObjects.Graphics, time: number) {
+    if (!this.beaconGfx) this.beaconGfx = this.add.graphics().setDepth(21900);
+    const bg = this.beaconGfx; bg.clear();
     const mark = S.waypoint;
-    if (!mark) return;
+    if (!mark) { S.route = null; this.routeKey = ''; return; }
     const d = Math.hypot(mark.x - this.me.x, mark.y - this.me.y);
-    if (d < 2) { S.waypoint = null; bus.emit('toast', { text: 'Destino alcanzado: ' + mark.name, kind: 'good' }); return; }
-    // The compass points toward the destination; click routes handle local obstacles.
-    if ((mark.x < 400) !== (this.me.x < 400)) return;
-    const a = Math.atan2(mark.y - this.me.y, mark.x - this.me.x), x = this.me.x * PX + Math.cos(a) * 25, y = this.me.y * PX + Math.sin(a) * 25;
-    g.fillStyle(0xf9da82, 0.9);
-    g.fillTriangle(x + Math.cos(a) * 5, y + Math.sin(a) * 5, x + Math.cos(a + 2.3) * 4, y + Math.sin(a + 2.3) * 4, x + Math.cos(a - 2.3) * 4, y + Math.sin(a - 2.3) * 4);
+    if (d < 2) { S.waypoint = null; S.route = null; audio.play('quest'); this.fx.ring(this.me.x * PX, this.me.y * PX, '#ffe5a4', 26, 700); bus.emit('toast', { text: '📍 Destino alcanzado: ' + mark.name, kind: 'good' }); return; }
+    if ((mark.x < 400) !== (this.me.x < 400)) { S.route = null; return; }   // dentro de un edificio o cueva: primero sal
+    const key = mark.x + ',' + mark.y + ',' + this.canSurf();
+    let near = S.route ? nearestOnRoute(S.route, this.me) : null;
+    const stale = key !== this.routeKey || !S.route || (near && near.dist > 2.6);
+    if (stale && time - this.routeAt > (this.routeFails ? 4000 : 600)) {
+      this.routeAt = time; this.routeKey = key;
+      const r = findRoute(this.world, this.me, mark, this.canSurf());
+      S.route = r; this.routeFails = r ? 0 : this.routeFails + 1;
+      if (!r && this.routeFails === 1) bus.emit('toast', { text: 'No hay camino a pie hasta ' + mark.name + (this.canSurf() ? '.' : '. Quizá necesites un Pokémon de agua para nadar.'), kind: 'info' });
+      near = r ? nearestOnRoute(r, this.me) : null;
+    }
+    const route = S.route;
+    if (route && near && near.index > 0) route.splice(0, near.index);
+    S.routeLen = route ? routeLength(route) + Math.hypot(route[0].x - this.me.x, route[0].y - this.me.y) : d;
+    const view = this.cameras.main.worldView;
+    if (route && route.length > 1) {
+      // flechas que avanzan por el camino: doradas cerca, se desvanecen a lo lejos
+      // rastro luminoso continuo bajo las flechas
+      g.lineStyle(5, 0xffd860, 0.13); g.beginPath(); g.moveTo(this.me.x * PX, this.me.y * PX);
+      for (let i = 0; i < Math.min(route.length, 70); i++) g.lineTo(route[i].x * PX, route[i].y * PX);
+      g.strokePath();
+      const SP = 1.3, flow = (time / 650) % 1;
+      let acc = 0, next = SP * (1 - flow), shown = 0;
+      for (let i = 1; i < route.length && shown < 90; i++) {
+        const a = route[i - 1], b = route[i], seg = Math.hypot(b.x - a.x, b.y - a.y);
+        while (next <= acc + seg && shown < 90) {
+          const t = (next - acc) / seg, x = (a.x + (b.x - a.x) * t) * PX, y = (a.y + (b.y - a.y) * t) * PX;
+          next += SP; shown++;
+          if (x < view.x - 16 || x > view.right + 16 || y < view.y - 16 || y > view.bottom + 16) continue;
+          // dirección suavizada (mira un par de casillas adelante)
+          const c = route[Math.min(route.length - 1, i + 1)], ang = Math.atan2(c.y - a.y, c.x - a.x);
+          const fade = Math.max(0.22, 1 - shown / 70), s = 4.2;
+          const ca = Math.cos(ang), sa = Math.sin(ang);
+          g.fillStyle(0x2a1a00, 0.35 * fade);
+          g.fillCircle(x, y + 1, 4.2);
+          g.fillStyle(0xffd860, 0.9 * fade);
+          g.fillTriangle(x + ca * s * 1.3, y + sa * s * 1.3, x - ca * s + sa * s, y - sa * s - ca * s, x - ca * s * 0.35, y - sa * s * 0.35);
+          g.fillTriangle(x + ca * s * 1.3, y + sa * s * 1.3, x - ca * s - sa * s, y - sa * s + ca * s, x - ca * s * 0.35, y - sa * s * 0.35);
+          g.fillStyle(0xfff6c8, 0.9 * fade); g.fillCircle(x + ca * s * 0.5, y + sa * s * 0.5, 0.9);
+        }
+        acc += seg;
+      }
+    } else {
+      // sin ruta: flecha de brújula junto al entrenador
+      const a = Math.atan2(mark.y - this.me.y, mark.x - this.me.x), x = this.me.x * PX + Math.cos(a) * 25, y = this.me.y * PX + Math.sin(a) * 25;
+      g.fillStyle(0xf9da82, 0.9);
+      g.fillTriangle(x + Math.cos(a) * 5, y + Math.sin(a) * 5, x + Math.cos(a + 2.3) * 4, y + Math.sin(a + 2.3) * 4, x + Math.cos(a - 2.3) * 4, y + Math.sin(a - 2.3) * 4);
+    }
+    // faro en el destino: columna de luz, anillos y rombo flotante
+    const mx = mark.x * PX, my = mark.y * PX;
+    if (mx > view.x - 40 && mx < view.right + 40 && my > view.y - 120 && my < view.bottom + 40) {
+      const pulse = (time % 1400) / 1400;
+      for (let k = 0; k < 6; k++) { bg.fillStyle(0xffe08a, 0.05 + k * 0.025); bg.fillRect(mx - 7 + k, my - 110, 14 - k * 2, 110); }
+      bg.lineStyle(1.5, 0xffe08a, 0.9 * (1 - pulse)); bg.strokeEllipse(mx, my, 10 + pulse * 30, 5 + pulse * 15);
+      bg.lineStyle(1, 0xffffff, 0.7); bg.strokeEllipse(mx, my, 12, 6);
+      const fy = my - 30 + Math.sin(time / 300) * 3;
+      bg.fillStyle(0x6a4800, 0.9); bg.fillTriangle(mx, fy - 8, mx + 6, fy, mx - 6, fy); bg.fillTriangle(mx, fy + 8, mx + 6, fy, mx - 6, fy);
+      bg.fillStyle(0xffd860, 1); bg.fillTriangle(mx, fy - 6.5, mx + 4.6, fy, mx - 4.6, fy); bg.fillTriangle(mx, fy + 6.5, mx + 4.6, fy, mx - 4.6, fy);
+      bg.fillStyle(0xffffff, 0.9); bg.fillTriangle(mx, fy - 6.5, mx + 2, fy - 2, mx - 1, fy - 1);
+    } else {
+      // destino fuera de la pantalla: flecha en el borde
+      const a = Math.atan2(my - this.me.y * PX, mx - this.me.x * PX), cx = view.centerX, cy = view.centerY;
+      const rx = view.width / 2 - 26, ry = view.height / 2 - 26, k = Math.min(rx / Math.abs(Math.cos(a) || 1e-6), ry / Math.abs(Math.sin(a) || 1e-6));
+      const ex = cx + Math.cos(a) * k, ey = cy + Math.sin(a) * k, s = 9 + Math.sin(time / 200);
+      bg.fillStyle(0x1a1200, 0.7); bg.fillCircle(ex, ey, s + 4);
+      bg.fillStyle(0xffd860, 1); bg.fillTriangle(ex + Math.cos(a) * s, ey + Math.sin(a) * s, ex + Math.cos(a + 2.4) * s * 0.8, ey + Math.sin(a + 2.4) * s * 0.8, ex + Math.cos(a - 2.4) * s * 0.8, ey + Math.sin(a - 2.4) * s * 0.8);
+    }
   }
 
   drawTrainer(v: PlayerView, x: number, y: number, dir: number, moving: boolean, time: number, hp: number) {

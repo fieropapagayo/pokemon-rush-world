@@ -6,6 +6,27 @@ import { audio } from '../systems/audio';
 
 const HISTORY: { ver: string; date: string; items: string[] }[] = [
   {
+    ver: '2.10 · Feedback de Combate y Control Táctico',
+    date: '27 de octubre de 2026',
+    items: [
+      'Visualización de subida de nivel con fuegos estelares dorados, anillo radiante y texto dinámico "¡Nv. X!" sobre el Pokémon que sube de nivel.',
+      'Estadísticas flotantes de crecimiento "+PS +ATK +DEF" para los miembros de tu equipo con aviso descriptivo en el registro de aventuras.',
+      'Retícula de objetivo adaptativa: el anillo de selección cambia automáticamente a oro para shinies salvajes, rojo en orden de combate y cian en fijación táctica.',
+      'Tecla rápida [Q] para usar tu poción más conveniente en el equipo al instante durante combates intensos.',
+      'Selector desplegable por Tipo Elemental en Pokédex con botón de reseteo rápido en un solo clic.',
+    ],
+  },
+  {
+    ver: '2.9 · Gritos Retro y HUD de Buffs',
+    date: '27 de octubre de 2026',
+    items: [
+      'Gritos retro chiptune procedurales sintetizados en WebAudio para todas las 91 especies en Pokédex, Caja, caricias y shinies.',
+      'Efectos sonoros y retroalimentación contundente para golpes críticos y súper eficaces.',
+      'Badges flotantes con temporizador en tiempo real para Incienso Raro, EXP doble y sinergias activas en el HUD.',
+      'Cinta de control de una sola fila en Equipo y Caja con filtros avanzados sin desbordamiento.',
+    ],
+  },
+  {
   "ver": "2.8 · Volumen y Materiales",
   "date": "27 de octubre de 2026",
   "items": [

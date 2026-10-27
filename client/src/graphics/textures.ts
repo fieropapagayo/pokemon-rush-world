@@ -17,7 +17,7 @@ export function monURL(key: string, shiny = false, scale = 2, dir = 1, frame = 0
   const k = `${key}|${shiny ? 1 : 0}|${scale}|${dir}|${frame}`;
   let u = portraitCache.get(k);
   if (!u) {
-    u = renderMon3D(key, shiny, dir, frame).toCanvas(scale).toDataURL();
+    u = renderMon3D(key, shiny, dir, frame, scale).toCanvas().toDataURL();   // retrato nítido a su tamaño exacto
     portraitCache.set(k, u);
   }
   return u;
@@ -42,7 +42,10 @@ function addSheet(scene: Phaser.Scene, key: string, c: HTMLCanvasElement, fw: nu
 // Generate only the species, palette and view actually needed. Reused by all entities.
 export function ensureMonTexture(scene: Phaser.Scene, species: string, shiny: boolean, direction = 1): string {
   const key = `mon3d:${species}:${+shiny}:${direction}`;
-  if (!scene.textures.exists(key)) addSheet(scene, key, monSheet(species, shiny, direction), MON_FRAME, MON_FRAME);
+  if (!scene.textures.exists(key)) {
+    addSheet(scene, key, monSheet(species, shiny, direction), MON_FRAME, MON_FRAME);
+    scene.textures.get(key).setFilter(Phaser.Textures.FilterMode.LINEAR);   // modelos a 1,5×: se reducen con suavizado
+  }
   return key;
 }
 
@@ -79,7 +82,8 @@ export function buildTextures(scene: Phaser.Scene) {
     ['crystal', [0]], ['center', [0]], ['mart', [0]], ['house', [0, 1, 2, 3]], ['lab', [0]], ['fountain', [0]], ['lamp', [0]], ['sign', [0]],
     ['statue', [0]], ['tower', [0]], ['cave', [0, 1]], ['itemball', [0]],
     ['bed', [0, 1]], ['table', [0, 1]], ['shelf', [0, 1, 2]], ['bookcase', [0, 1]], ['plant', [0]], ['tv', [0]], ['counter', [0, 1]], ['pc', [0]],
-    ['sofa', [0]], ['rug', [0, 1, 2]], ['machine', [0, 1]], ['stove', [0]], ['window', [0]], ['flowerbed', [0, 1, 2]],
+    ['sofa', [0]], ['rug', [0, 1, 2]], ['machine', [0, 1]], ['stove', [0]], ['window', [0]], ['flowerbed', [0, 1, 2, 3]],
+    ['hedge', [0, 1, 2]], ['bench', [0]], ['fence', [0]], ['flowerpatch', [0, 1, 2, 3]],
   ];
   for (const [k, vs] of objs) for (const v of vs) addCanvas(scene, `obj:${k}:${v}`, objectArt(k, v).toCanvas());
   for (let t = 0; t < 4; t++) for (const open of [0, 1]) addCanvas(scene, `chest:${t}:${open}`, objectArt('chest', t + open * 10).toCanvas());

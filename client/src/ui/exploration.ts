@@ -16,7 +16,7 @@ export function markZone(hud: Hud, zone: number) {
   const point = dungeon && sc.me.x < 400 ? { x: dungeon.outside.x + 0.5, y: dungeon.outside.y + 0.5 } : nearestZonePoint(hud.world, sc.me, zone);
   if (!point) return hud.toast('No se ha encontrado un punto accesible en esta zona.', 'info');
   S.waypoint = { ...point, name: ZONES[zone].name };
-  hud.toast('Destino marcado: ' + ZONES[zone].name + '. Sigue la brújula dorada.', 'info');
+  hud.toast('Destino marcado: ' + ZONES[zone].name + '. Sigue las flechas doradas del suelo.', 'info');
 }
 
 export class ExplorationGuide {
@@ -27,8 +27,13 @@ export class ExplorationGuide {
     this.context = document.createElement('button'); this.context.className = 'context-action live'; this.context.hidden = true;
     hud.root.append(this.root, this.compass, this.context);
     this.context.onclick = () => bus.emit('interact');
-    this.compass.onclick = () => { S.waypoint = null; };
-    this.compass.title = 'Pulsa para quitar el destino';
+    this.compass.onclick = e => {
+      const b = (e.target as HTMLElement).closest<HTMLElement>('[data-nav]');
+      if (b?.dataset.nav === 'go') { bus.emit('auto_route'); return; }
+      if (b?.dataset.nav === 'off') { S.waypoint = null; S.route = null; return; }
+      this.hud.panels.open('map');
+    };
+    this.compass.title = 'Sigue las flechas doradas del suelo · ▶ camina solo · × quita el destino';
     this.root.onclick = e => {
       const b = (e.target as HTMLElement).closest<HTMLElement>('[data-guide]'); if (!b) return;
       const action = b.dataset.guide;
@@ -68,9 +73,13 @@ export class ExplorationGuide {
     if (it) this.context.innerHTML = `<kbd>E</kbd> ${esc(it.label)} <span>↵</span>`;
     const point = S.waypoint; this.compass.hidden = !point;
     if (point) {
-      const angle = Math.atan2(point.y - sc.me.y, point.x - sc.me.x) * 180 / Math.PI + 90;
-      const distance = Math.round(Math.hypot(point.x - sc.me.x, point.y - sc.me.y));
-      this.compass.innerHTML = `<span class="compass-arrow" style="transform:rotate(${angle}deg)">↑</span><span><small>DESTINO · DIRECCIÓN</small><b>${esc(point.name)}</b></span><span>${distance} m</span><span aria-label="Quitar destino">×</span>`;
+      const angle = Math.atan2(point.y - sc.me.y, point.x - sc.me.x) * 180 / Math.PI;
+      const inside = (point.x < 400) !== (sc.me.x < 400);
+      const meters = Math.round(S.route ? S.routeLen : Math.hypot(point.x - sc.me.x, point.y - sc.me.y));
+      const mins = Math.max(1, Math.round(meters / 4.2 / 60));
+      const sub = inside ? 'SAL DEL EDIFICIO O CUEVA' : S.route ? `RUTA MARCADA · ~${mins} MIN A PIE` : 'BUSCANDO CAMINO…';
+      const html = `<span class="compass-arrow" style="transform:rotate(${Math.round(angle / 5) * 5}deg)">➤</span><span class="compass-txt"><small>${sub}</small><b>${esc(point.name)}</b></span><span class="compass-dist">${meters} m</span>${S.route && !inside ? '<button class="compass-btn go" data-nav="go" title="Caminar solo por la ruta (cualquier tecla para parar)">▶</button>' : ''}<button class="compass-btn" data-nav="off" aria-label="Quitar destino" title="Quitar destino">×</button>`;
+      if (html !== (this as any)._cmp) { (this as any)._cmp = html; this.compass.innerHTML = html; }
     }
   }
 }

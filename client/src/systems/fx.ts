@@ -57,8 +57,8 @@ export class FX {
     this.burst(x, y, color, 4, 'px', { speed: { min: 20, max: 80 } });
   }
 
-  ripple(x: number, y: number, color = '#a0d8ff', r = 16, dur = 380) {
-    const img = this.s.add.image(x, y, 'ripple').setDepth(13900).setTint(hex(color)).setScale(0.15).setAlpha(0.8);
+  ripple(x: number, y: number, color = '#a0d8ff', r = 16, dur = 380, depth = -29) {
+    const img = this.s.add.image(x, y, 'ripple').setDepth(depth).setTint(hex(color)).setScale(0.15).setAlpha(0.8);
     this.s.tweens.add({ targets: img, scale: r / 16, alpha: 0, duration: dur, ease: 'Cubic.Out', onComplete: () => img.destroy() });
   }
 

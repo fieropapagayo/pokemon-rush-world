@@ -249,3 +249,12 @@
 .news-head b { color: #f2d28b; font-weight: 400; }
 .news ul { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.5; color: #e2ece6; }
 .news li::marker { color: #f2d28b; }
+.wm-route { position:absolute; left:0; top:0; width:100%; height:100%; pointer-events:none; overflow:visible; }
+
+
+/* Badges de Buffs en HUD */
+.buff-pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border-radius: 12px; font-size: 11px; font-weight: bold; background: #0c1a24cc; border: 1px solid #ffffff25; box-shadow: 0 2px 6px #0008; transition: transform .1s; }
+.buff-pill:hover { transform: translateY(-1px); }
+.buff-pill.xp { color: #ffe060; border-color: #ffe06088; background: linear-gradient(135deg, #3d340c, #1a1604); }
+.buff-pill.incense { color: #a0f0ff; border-color: #60d0ff88; background: linear-gradient(135deg, #0c2c3d, #04141c); }
+.buff-pill.link { color: #ff9830; border-color: #ffaa4088; background: linear-gradient(135deg, #3d200c, #1c0e04); }

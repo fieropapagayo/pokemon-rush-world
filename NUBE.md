@@ -13,6 +13,10 @@
 
 Necesita una cuenta gratuita de GitHub y otra de Render.
 
+**Lo más fácil: doble clic en `subir-a-render.bat`.** Crea el repositorio privado, sube el juego, copia `CLOUD_KEY` al portapapeles y abre Render con todo rellenado: solo hay que entrar con GitHub, pegar la clave y pulsar *Deploy Blueprint*. Después, cada vez que abras `run.bat` los cambios se suben solos y Render publica la nueva versión. Si respondes "s" a la última pregunta, `run.bat` abrirá el juego de la nube en vez de montar un servidor en tu PC (`JUGAR_EN_NUBE=true` en `.env`).
+
+A mano:
+
 1. Crea un repositorio **privado** en GitHub y sube esta carpeta (`PokemonRushWorld`). El `.gitignore` ya excluye `.env`, `data/` y las claves.
 2. En <https://dashboard.render.com> → **New → Blueprint** → elige el repositorio. Render lee `render.yaml`.
 3. Cuando pida `CLOUD_KEY`, pega el valor de `CLOUD_KEY=` de tu `.env`.

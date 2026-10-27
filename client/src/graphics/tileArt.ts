@@ -185,16 +185,22 @@ FN[T.CAVEWALL] = (x, y, v) => {
   if (h > 0.9) return '#3a302c';
   return '#2a221f';
 };
+// Empedrado cálido: adoquines de anchos distintos en cada hilera, juntas con musgo y cantos redondeados.
+const COBBLE = ['#d8cdb6', '#cfc2a8', '#c6b9a0', '#ddd3c1', '#c2b6a2', '#d4c3a2', '#cabca6'];
 FN[T.TOWN] = (x, y, v) => {
-  const row = Math.floor(y / 4), off = row % 2 ? 4 : 0;
-  const bx = (x + off) % 8, by = y % 4;
-  if (by === 3 || bx === 7) return '#8e968c';
-  const h = r(Math.floor((x + off) / 8), row, v, 16);
-  const base = h < 0.33 ? '#cdc6b8' : h < 0.66 ? '#c4bcae' : '#d4cdc0';
-  if (by === 0) return shade(base, 0.14);
-  if (bx === 0) return shade(base, 0.08);
-  if (by === 2 && bx > 0) return shade(base, -0.06);
-  return base;
+  const row = y >> 2, by = y & 3;
+  const off = Math.floor(phash(row, v, 160) * 16), sx = (x + off) % 16;
+  const cuts = phash(row, v, 163) < 0.5 ? [0, 5, 11, 16] : [0, 6, 10, 16];
+  let s = 0; while (sx >= cuts[s + 1]) s++;
+  const bx = sx - cuts[s], bw = cuts[s + 1] - cuts[s];
+  if (by === 3 || bx === bw - 1) return phash(x, y, v * 7 + 161) < 0.13 ? '#7c9452' : (phash(x, y, 164) < 0.5 ? '#8a806c' : '#827865');
+  const base = COBBLE[Math.floor(phash(row * 3 + s, v, 162) * COBBLE.length)];
+  if ((bx === 0 && by === 0) || (bx === bw - 2 && by === 2)) return shade(base, -0.12);
+  let k = 0;
+  if (by === 0) k += 0.11; else if (by === 2) k -= 0.08;
+  if (bx === 0) k += 0.05; else if (bx === bw - 2) k -= 0.06;
+  if (phash(x, y, v + 165) < 0.07) k -= 0.07;
+  return k ? shade(base, k) : base;
 };
 FN[T.HAUNT] = (x, y, v) => {
   const h = r(x, y, v, 17);

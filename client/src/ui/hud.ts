@@ -91,6 +91,7 @@ export class Hud {
             <div class="muted" style="font-size:11px" id="tlxpt"></div>
           </div>
         </div>
+        <div class="buffs-row" id="tlbuffs" style="display:none;gap:4px;flex-wrap:wrap;margin:3px 0 2px"></div>
         <div class="res" id="res"></div>
       </div>
       <div class="panel target live" id="target" style="display:none"></div>
@@ -122,7 +123,7 @@ export class Hud {
       <div class="panel duel-hud live" id="duelhud" hidden></div>
       <div class="legend-banner" id="legend" hidden></div>
     `);
-    for (const id of ['vig', 'tl', 'tlp', 'tlname', 'tllv', 'tlhp', 'tlxp', 'tlxpt', 'res', 'target', 'events', 'boss', 'bossn', 'bossh', 'bosss', 'mm', 'mmc', 'zn', 'netdot', 'netping', 'online', 'clock', 'tracker', 'toasts', 'zb', 'zbt', 'zbs', 'team', 'actions', 'chat', 'clog', 'cin', 'menubar', 'emotes', 'enc', 'duelhud', 'legend']) this.els[id] = document.getElementById(id)!;
+    for (const id of ['vig', 'tl', 'tlp', 'tlname', 'tllv', 'tlhp', 'tlxp', 'tlxpt', 'tlbuffs', 'res', 'target', 'events', 'boss', 'bossn', 'bossh', 'bosss', 'mm', 'mmc', 'zn', 'netdot', 'netping', 'online', 'clock', 'tracker', 'toasts', 'zb', 'zbt', 'zbs', 'team', 'actions', 'chat', 'clog', 'cin', 'menubar', 'emotes', 'enc', 'duelhud', 'legend']) this.els[id] = document.getElementById(id)!;
     // Dock de menús: rejilla fija de iconos (antes los botones se apilaban de forma irregular).
     const menus: [string, string, string, string][] = [
       ['team', 'Equipo', 'T', '◓'], ['dex', 'Pokédex', 'P', '▣'], ['inv', 'Mochila', 'I', '✚'], ['map', 'Mapa', 'M', '⌖'],
@@ -204,8 +205,11 @@ export class Hud {
     net.on('mlv', m => {
       const ms = monByUid(m.uid); const sp = ms ? SPECIES[ms.sp] : null;
       if (ms) ms.lvl = m.lvl;
-      if (sp && m.move) this.toast(`${sp.name} aprendió ${m.move}.`, 'good');
-      if (sp && m.evo) this.toast(`¡${sp.name} puede evolucionar a ${SPECIES[m.evo].name}! Abre el Equipo (T).`, 'shiny');
+      if (sp) {
+        this.toast(`¡${sp.name} subió al Nivel ${m.lvl}! (+Estadísticas)`, 'good');
+        if (m.move) this.toast(`¡${sp.name} aprendió ${m.move}!`, 'shiny');
+        if (m.evo) this.toast(`¡${sp.name} puede evolucionar a ${SPECIES[m.evo].name}! Abre el Equipo (T).`, 'shiny');
+      }
     });
     net.on('tlv', m => this.levelUp(m));
     net.on('evolved', m => this.panels.evolution(m));
@@ -225,6 +229,7 @@ export class Hud {
     bus.on('toast', (d: any) => this.toast(d.text, d.kind));
     bus.on('dialog', (d: any) => this.dialog(d.name, d.lines, d.onEnd));
     bus.on('flee', () => net.send({ t: 'flee' }));
+    bus.on('quick_potion', () => (this as any)._usePotion?.());
     bus.on('cycle_stance', () => { const i = STANCES.findIndex(s => s.id === S.me.stance); this.setStance(STANCES[(i + 1) % STANCES.length].id); });
     bus.on('ambush', (d: any) => this.encCard(d.id, d.aggro));
     net.on('fled', m => { if (m.ok) { this.toast(m.n ? '¡Has escapado sin problemas!' : 'Tu equipo deja de combatir unos segundos.', 'good'); audio.play('dash'); this.hideEnc(); } else audio.play('error'); });
@@ -287,7 +292,25 @@ export class Hud {
     this.els.tllv.textContent = 'NV.' + c.tlvl;
     const a = trainerXpForLevel(c.tlvl), b = trainerXpForLevel(c.tlvl + 1);
     this.els.tlxp.style.width = Math.min(100, (c.txp - a) / Math.max(1, b - a) * 100) + '%';
-    this.els.tlxpt.textContent = `EXP ${fmt(c.txp - a)} / ${fmt(b - a)}${c.xpBoost > 0 ? ' · ¡EXP x2!' : ''}${c.incense > 0 ? ' · Incienso activo' : ''}`;
+    this.els.tlxpt.textContent = `EXP ${fmt(c.txp - a)} / ${fmt(b - a)}`;
+    const buffs: string[] = [];
+    if (c.xpBoost > 0) {
+      const s = Math.ceil(c.xpBoost / 1000);
+      buffs.push(`<span class="buff-pill xp" title="Potenciador de experiencia: ¡EXP x2 activa durante ${s}s!">⭐ EXP x2 (${s}s)</span>`);
+    }
+    if (c.incense > 0) {
+      const s = Math.ceil(c.incense / 1000);
+      buffs.push(`<span class="buff-pill incense" title="Incienso Raro: atracción salvaje aumentada y prob. shiny x3 (${s}s restantes)">🕯 Incienso (${s}s)</span>`);
+    }
+    if (c.links && c.links.length > 0) {
+      const names = c.links.map(l => LINK_MAP[l.id]?.name || l.id).join(', ');
+      buffs.push(`<span class="buff-pill link" title="Sinergias Link activas: ${esc(names)}">⚡ ${c.links.length} Link</span>`);
+    }
+    const bEl = this.els.tlbuffs;
+    if (bEl) {
+      bEl.innerHTML = buffs.join('');
+      bEl.style.display = buffs.length ? 'flex' : 'none';
+    }
     const hits: { t: number; d: number }[] = (S as any)._dmgHits || [];
     const nowMs = Date.now();
     const recent = hits.filter(h => nowMs - h.t <= 5000);
@@ -338,9 +361,10 @@ export class Hud {
       <img src="${iconURL(icons[s.n])}" alt=""><span class="k">${s.key}</span><span class="cd" id="cd${s.n}" style="height:0"></span><span class="cdt" id="cdt${s.n}"></span></button>`).join('');
     html += `<div class="ballsel">${BALLS.map(b => `<div class="b ${S.settings.ball === b ? 'sel' : ''}" data-ball="${b}" title="${ITEMS[b].name} (B para cambiar)"><img src="${iconURL(b)}"><span>${c.items[b] || 0}</span></div>`).join('')}</div>
       <button class="btn red throwbtn" id="throw" ${(c.items[S.settings.ball] || 0) < 1 ? 'disabled' : ''} title="Lanzar Ball al objetivo [C] o clic derecho">Lanzar [C]</button>
-      <button class="btn green small" id="usepot" ${(c.items.pocion || 0) + (c.items.superpocion || 0) < 1 ? 'disabled' : ''} title="Usar Poción en el equipo">Poción (${(c.items.pocion || 0) + (c.items.superpocion || 0)})</button>
+      <button class="btn green small" id="usepot" ${(c.items.pocion || 0) + (c.items.superpocion || 0) < 1 ? 'disabled' : ''} title="Usar Poción en el equipo [Q]">Poción [Q] (${(c.items.pocion || 0) + (c.items.superpocion || 0)})</button>
       ${(c.items.revivir || 0) > 0 ? `<button class="btn gold small" id="userev" title="Revivir Pokémon debilitados del equipo">Revivir (${c.items.revivir})</button>` : ''}
       <button class="btn gold small" id="usecamp" title="Montar hoguera y descansar [Z] (restaura 60% de PS y revive Pokémon fuera de combate)">🏕 [Z]</button>
+      ${(c.items.incienso || 0) > 0 && (c.incense || 0) <= 0 ? `<button class="btn purple small" id="useinc" title="Encender Incienso Raro (atrae Pokémon raros y aumenta probabilidad shiny x3)">🕯 Incienso (${c.items.incienso})</button>` : ''}
       <button class="btn gray small fleebtn" id="flee" title="Huir de los salvajes que te persiguen [F]">Huir [F]</button>
       <div class="stances" title="Modo del equipo [V]">${STANCES.map(s => `<button class="st ${S.me.stance === s.id ? 'on' : ''}" data-st="${s.id}" title="${s.name}: ${esc(s.desc)}"><span>${s.ic}</span><small>${s.name}</small></button>`).join('')}</div>`;
     this.els.actions.innerHTML = html;
@@ -350,12 +374,25 @@ export class Hud {
     if (revBtn) revBtn.onclick = () => net.send({ t: 'use', item: 'revivir' });
     const campBtn = this.els.actions.querySelector('#usecamp') as HTMLElement | null;
     if (campBtn) campBtn.onclick = () => net.send({ t: 'camp' });
+    const incBtn = this.els.actions.querySelector('#useinc') as HTMLElement | null;
+    if (incBtn) incBtn.onclick = () => { net.send({ t: 'use', item: 'incienso' }); audio.play('sparkle'); };
     // pulsar el modo activo pasa al siguiente (en pantallas estrechas solo se ve el activo)
     this.els.actions.querySelectorAll<HTMLElement>('[data-st]').forEach(b => b.onclick = () => b.dataset.st === S.me.stance ? bus.emit('cycle_stance') : this.setStance(b.dataset.st!));
     this.els.actions.querySelectorAll<HTMLElement>('[data-sk]').forEach(d => d.onclick = () => bus.emit('skill', parseInt(d.dataset.sk!, 10)));
     this.els.actions.querySelectorAll<HTMLElement>('[data-ball]').forEach(d => d.onclick = () => { S.settings.ball = d.dataset.ball!; saveSettings(); audio.play('ui'); this.renderActions(); });
     (this.els.actions.querySelector('#throw') as HTMLElement).onclick = () => bus.emit('throw');
-    (this.els.actions.querySelector('#usepot') as HTMLElement).onclick = () => { const it = (c.items.superpocion || 0) > 0 && (!(c.items.pocion > 0) || S.team.some(t => t.hp < t.mhp * 0.4)) ? 'superpocion' : 'pocion'; net.send({ t: 'use', item: it }); };
+    const usePotion = () => {
+      const curC = S.core; if (!curC) return;
+      const it = (curC.items.superpocion || 0) > 0 && (!(curC.items.pocion > 0) || S.team.some(t => t.hp < t.mhp * 0.4)) ? 'superpocion' : 'pocion';
+      if ((curC.items[it] || 0) > 0) {
+        net.send({ t: 'use', item: it });
+        audio.play('heal', { pitch: 1.1 });
+      } else {
+        this.toast('No te quedan pociones disponibles.', 'info');
+      }
+    };
+    (this.els.actions.querySelector('#usepot') as HTMLElement).onclick = usePotion;
+    (this as any)._usePotion = usePotion;
   }
 
   updateCooldowns() {
@@ -504,6 +541,17 @@ export class Hud {
     for (const b of S.bosses) { if (!b.alive) continue; const [x, y] = toM(b.x, b.y); if (x < 0 || y < 0 || x > 168 || y > 168) continue; ctx.strokeStyle = '#ff3030'; ctx.strokeRect(x - 4, y - 4, 8, 8); }
     for (const e of S.events.values()) { if (!e.x) continue; const [x, y] = toM(e.x, e.y); ctx.fillStyle = '#ffd040'; ctx.beginPath(); ctx.arc(Math.max(4, Math.min(164, x)), Math.max(4, Math.min(164, y)), 4, 0, 7); ctx.fill(); }
     for (const p of sc.players.values()) { const [x, y] = toM(p.x, p.y); const meta = S.players.get(p.id); ctx.fillStyle = S.party.id && meta?.party === S.party.id ? '#60f0ff' : '#ffffff'; ctx.fillRect(x - 2, y - 2, 4, 4); }
+    if (S.route && S.route.length > 1) {
+      ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      const pts = S.route.filter((_, i) => i % 2 === 0 || i === S.route!.length - 1);
+      for (const [w, c] of [[4, '#2a1a00aa'], [2, '#ffd860']] as const) {
+        ctx.strokeStyle = c; ctx.lineWidth = w; ctx.setLineDash(w === 2 ? [4, 3] : []); ctx.lineDashOffset = -performance.now() / 90;
+        ctx.beginPath(); const [x0, y0] = toM(sc.me.x, sc.me.y); ctx.moveTo(x0, y0);
+        for (const p of pts) { const [x, y] = toM(p.x, p.y); ctx.lineTo(x, y); }
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
     if (S.waypoint) { const [x, y] = toM(S.waypoint.x, S.waypoint.y); ctx.strokeStyle = '#ffe5a4'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(Math.max(5, Math.min(163, x)), Math.max(5, Math.min(163, y)), 4, 0, Math.PI * 2); ctx.stroke(); }
     ctx.fillStyle = '#ffe040'; ctx.fillRect(R * S2 - 3, R * S2 - 3, 6, 6); ctx.strokeStyle = '#000'; ctx.strokeRect(R * S2 - 3.5, R * S2 - 3.5, 7, 7);
   }

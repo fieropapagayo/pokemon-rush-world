@@ -3,6 +3,7 @@ import { NPC_LOOKS, colsFromLook } from '../client/src/graphics/trainerArt';
 import { renderTrainer, TRAINER_W, TRAINER_H, TRAINER_SCALE } from '../client/src/graphics/trainer3d';
 import { natureArt, objectScale } from '../client/src/graphics/nature3d';
 import type { PixelArt } from '../client/src/graphics/pixel';
+import { townArt } from '../client/src/graphics/townArt';
 
 function checkFrame(g: PixelArt, label: string) {
   assert(g.data.some(v => !!v), `${label}: empty texture`);
@@ -24,5 +25,9 @@ for (const [kind, n] of [['tree', 6], ['bush', 3], ['rock', 3], ['boulder', 2]] 
   for (let v = 0; v < n; v++) { checkFrame(natureArt(kind, v), `${kind} ${v}`); count++; }
   assert.equal(objectScale(kind), 0.5);
 }
-assert.equal(objectScale('house'), 1, 'Keep building dimensions and entrances');
+// Pueblos a 2×: se dibujan a escala 0,5 y deben ocupar exactamente sus casillas (puertas en su sitio).
+for (const [kind, tiles, vs] of [['house', 4, 4], ['center', 5, 1], ['mart', 4, 1], ['flowerbed', 1, 4], ['hedge', 1, 3], ['bench', 2, 1], ['fence', 1, 1], ['flowerpatch', 1, 4]] as const) {
+  assert.equal(objectScale(kind), 0.5, `${kind} hi-res`);
+  for (let v = 0; v < vs; v++) { const g = townArt(kind, v)!; assert.equal(g.w * 0.5, tiles * 16, `${kind} ${v} width`); assert(g.data.some(p => !!p), `${kind} ${v} empty`); count++; }
+}
 console.log(`PASS: ${count} visual frames, silhouette margins, distinct poses and original world dimensions.`);

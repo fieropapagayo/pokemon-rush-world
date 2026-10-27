@@ -124,6 +124,22 @@ class AudioSys {
     this.play(crit ? 'crit' : (map[type] || 'hit'), { vol: 0.7 });
   }
 
+  cry(spIdx: number) {
+    if (!this.ctx || S.settings.sfx <= 0) return;
+    const now = performance.now();
+    const last = this.lastPlay.get('cry') || 0;
+    if (now - last < 140) return;
+    this.lastPlay.set('cry', now);
+    const id = Math.max(0, spIdx);
+    const baseFreq = 160 + ((id * 47) % 460);
+    const sweep = 0.5 + ((id * 17) % 15) * 0.1;
+    const type: OscillatorType = id % 3 === 0 ? 'square' : id % 3 === 1 ? 'sawtooth' : 'triangle';
+    const vol = 0.12;
+    this.tone(baseFreq, 0.08, type, vol, 0, sweep);
+    this.tone(baseFreq * (sweep > 1 ? 1.2 : 0.82), 0.13, type, vol * 0.85, 0.065, sweep > 1 ? 0.65 : 1.35);
+    if (id % 5 === 0) this.noise(0.06, 0.08, 0.04, 'bandpass', baseFreq * 2);
+  }
+
   // ---------------- música
   setMood(m: Mood, force = false) {
     if (m === this.mood && !force) return;

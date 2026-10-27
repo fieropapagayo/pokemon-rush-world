@@ -119,7 +119,7 @@ Opcional: pon en `.env` `PUBLIC_URL=` la dirección pública del juego (por ejem
 
 **Web publicada:** <https://pokemon-rush-world.pokemonrush.workers.dev> — ya configurada en `.env`; no hay que repetir el paso de la primera vez.
 
-**24/7 sin tu PC:** mira [NUBE.md](NUBE.md) (Render gratis, Oracle Always Free u otros).
+**24/7 sin tu PC:** doble clic en `subir-a-render.bat` (Render gratis; lo sube a GitHub y abre Render listo para desplegar). A partir de ahí `run.bat` sube cada cambio solo. Más opciones en [NUBE.md](NUBE.md).
 
 **Enlace para jugar desde cualquier PC o móvil, sin descargar nada:** <https://pokemon-rush-world.pokemonrush.workers.dev/jugar>. Al abrir `run.bat` el servidor abre solo una dirección pública con Cloudflare y la web redirige a ella.
 

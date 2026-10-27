@@ -1,5 +1,47 @@
 # Changelog
 
+## 2.11.0 · Rutas, Pueblos y Modelos — 27 de octubre de 2026
+
+### Localizar, mucho más fácil
+- **Ruta marcada de verdad**: al elegir un destino (mapa [M], botón "Ir" de cada zona, jefes, Centro Pokémon, líderes de gimnasio o clic en el mapa) el juego calcula el camino a pie por todo el mundo (A* que prefiere caminos y puentes y evita la hierba alta) y lo dibuja con **flechas doradas animadas en el suelo**.
+- La ruta aparece también en el **minimapa** y en el **mapa del mundo** (línea discontinua y metros que faltan). Se recalcula sola si te desvías.
+- **Brújula nueva**: metros y minutos a pie, botón **▶ para caminar solo** por la ruta (cualquier tecla lo para) y **×** para quitar el destino. Clic en la brújula abre el mapa.
+- **Faro de luz** en el destino y flecha en el borde de la pantalla cuando aún está lejos. Con un Pokémon de agua la ruta puede cruzar lagos.
+
+### Pueblos y flores
+- Casas, Centro Pokémon y Tienda redibujados **al doble de resolución**: vigas de madera, contraventanas, jardineras en las ventanas, farolillo, chimenea de ladrillo, tejas escalonadas, cumbrera, sombra del alero y zócalo de piedra. El Centro tiene emblema Poké Ball con volumen y rótulo con cruces; la Tienda, toldo de rayas y macetas.
+- **Calles empedradas**: adoquines cálidos de anchos distintos, cantos redondeados y musgo entre las juntas (antes, baldosa gris uniforme).
+- **Decoración**: jardines con setos en las cuatro esquinas, bancos alrededor de la fuente, vallas blancas delante de las casas (con hueco en la puerta) y macizos de flores pisables junto a las fachadas.
+- **Jardineras nuevas**: arriates redondos con borde de piedras, matas de hojas y flores de cinco pétalos en cuatro combinaciones.
+
+### Modelos 3D de todos los Pokémon
+- **50 % más de resolución** (96 px por fotograma) con filtrado suave dentro del mundo.
+- Esferas más redondas, **luz por píxel** con brillos nítidos, **sombras que viran a violeta y luces cálidas**, **oclusión ambiental** donde se tocan las piezas, **líneas interiores** que separan patas, brazos y cabeza, bandas de sombreado tipo pixel art y contorno más suave del lado de la luz.
+- Los árboles y los entrenadores usan el mismo motor y también ganan definición.
+
+### Servidor 24 h en Render
+- Nuevo **`subir-a-render.bat`**: crea el repositorio privado de GitHub, sube el juego, copia `CLOUD_KEY` al portapapeles y abre Render con todo listo para *Deploy Blueprint*.
+- Después, **`run.bat` sube los cambios solo** y Render publica la nueva versión. Opción `JUGAR_EN_NUBE=true` para que `run.bat` abra directamente el juego de la nube.
+
+### Comprobación
+- Nuevo `npm run test:nav`: rutas desde Pueblo Paleta a todos los pueblos, sin pasar por casillas bloqueadas, en menos de 10 ms.
+- `test:models` 11.648 fotogramas sin recortes · `test:visuals` 231 · `test:world`, `test:mechanics`, `test:gameplay`, `test:bots` 25/25, encuentros, exploración y clima: superadas.
+
+## 2.10.0 · Feedback de Combate y Control Táctico — 27 de octubre de 2026
+
+- **⚡ Subida de Nivel Dinámica y Estadísticas Flotantes (`GameScene.ts`, `game.ts`, `hud.ts`)**: sincronización de nivel exacto alcanzado por cada entidad con ráfaga de estrellas doradas, anillo de luz, rótulo dinámico `¡Nv. X!` y salto de estadísticas en verde (`+PS +ATK +DEF`) para tu equipo, más audio `levelup` y registro enriquecido en el cuaderno.
+- **🎯 Retícula de Fijación Adaptativa (`GameScene.ts`)**: el anillo de selección a los pies del objetivo (`selRing`) ajusta su matiz en tiempo real según el contexto: dorado `0xffd700` ante Pokémon Shiny salvajes, rojo ofensivo `0xff4040` durante el combate activo (`⚔ Luchar`) y cian táctico `0x60d8ff` al fijar objetivo pacíficamente para captura o inspección.
+- **🩹 Acceso Rápido a Pociones con Tecla [Q] (`GameScene.ts`, `hud.ts`)**: atajo inmediato para curar al equipo al vuelo con la mejor poción disponible en mochila (Poción o Superpoción) sin soltar el control del movimiento ni apartar el cursor de los rivales.
+- **🔍 Filtro por Tipo Elemental en Pokédex (`panels.ts`)**: menú desplegable integrado junto al buscador que permite aislar al instante todas las especies de un tipo concreto (Fuego, Agua, Planta, Dragón, Fantasma, etc.) con botón `✕` para restablecer la búsqueda con un solo clic.
+
+## 2.9.1 · Gritos Retro y Pulido de Combate — 27 de octubre de 2026
+
+- **🔊 Gritos Retro Chiptune Procedurales (`audio.ts`, `panels.ts`, `GameScene.ts`)**: síntesis WebAudio de gritos retro estilo 8-bit con afinación, frecuencia y modulación única para cada una de las 91 especies; se reproducen al inspeccionar en la Pokédex, seleccionar en la Caja, acariciar a tus Pokémon en el mundo o toparse con un salvaje shiny.
+- **⚔️ Pulido Táctil y Sonoro de Combate**: efectos sonoros y destellos visuales diferenciados para impactos críticos (`crit` estridente y sacudida de pantalla), súper eficaces (`hit` agudo brillante) y poco eficaces (`hit` apagado).
+- **🌊 Salpicaduras y Ondas Acuáticas Bajo los Pies**: el efecto de ondas en agua se renderiza directamente sobre la lámina acuática bajo los pies del personaje y sus seguidores con micro-salpicaduras de gotas.
+- **🏷️ Barra Flotante de Buffs en el HUD (`hud.ts`, `v24.css`)**: badges discretos y estilizados con temporizador en tiempo real para Incienso Raro, Potenciador de EXP x2 y Sinergias Link activas sin saturar la barra de recursos.
+- **📦 Barra de Control Compactada en Equipo y Caja (`panels.ts`)**: se reemplazaron las dos filas de 19 botones de filtros por una única barra de herramientas compacta con selector de tipo, selector de rareza, buscador rápido, ordenación y píldoras esenciales (`[Todos]`, `[⭐]`, `[✦]`, `[★]`, `[▲]`).
+
 ## 2.9.0 · Desafío y Comunidad — 27 de octubre de 2026
 
 ### Más difícil, como pediste

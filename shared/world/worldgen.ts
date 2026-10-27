@@ -7,7 +7,8 @@ import { GYM_BY_TOWN } from '../gyms';
 
 export type ObjKind = 'tree' | 'rock' | 'boulder' | 'bush' | 'grave' | 'pylon' | 'stalag' | 'crystal' | 'center' | 'mart' | 'house'
   | 'fountain' | 'lamp' | 'sign' | 'tower' | 'cave' | 'lab' | 'statue'
-  | 'bed' | 'table' | 'shelf' | 'plant' | 'tv' | 'counter' | 'pc' | 'sofa' | 'rug' | 'machine' | 'stove' | 'window' | 'bookcase' | 'flowerbed';
+  | 'bed' | 'table' | 'shelf' | 'plant' | 'tv' | 'counter' | 'pc' | 'sofa' | 'rug' | 'machine' | 'stove' | 'window' | 'bookcase' | 'flowerbed'
+  | 'hedge' | 'bench' | 'fence' | 'flowerpatch';
 
 export interface WObj { id: number; k: ObjKind; x: number; y: number; w: number; h: number; v: number; }
 export interface Portal { id: number; x: number; y: number; tx: number; ty: number; name: string; minLevel: number; }
@@ -54,9 +55,10 @@ const FOOT: Record<string, [number, number]> = {
   rock: [1, 1], boulder: [2, 1], bush: [1, 1], grave: [1, 1], pylon: [1, 1], stalag: [1, 1], crystal: [1, 1], cave: [0, 0],
   bed: [1, 2], table: [2, 1], shelf: [2, 1], plant: [1, 1], tv: [1, 1], counter: [3, 1], pc: [1, 1], sofa: [2, 1], rug: [3, 2],
   machine: [2, 1], stove: [1, 1], window: [2, 1], bookcase: [2, 1], flowerbed: [1, 1],
+  hedge: [1, 1], bench: [2, 1], fence: [1, 1], flowerpatch: [1, 1],
 };
 /** Objetos que se dibujan pero no bloquean el paso. */
-export const WALKABLE_OBJ = new Set<ObjKind>(['rug', 'window']);
+export const WALKABLE_OBJ = new Set<ObjKind>(['rug', 'window', 'flowerpatch']);
 // variantes de árbol: 0 roble, 1 pino, 2 palmera, 3 seco, 4 pino nevado, 5 árbol tétrico
 const TREE_FOOT: [number, number][] = [[2, 1], [1, 1], [1, 1], [1, 1], [1, 1], [2, 1]];
 export function footprint(k: ObjKind, v: number): [number, number] {
@@ -220,7 +222,21 @@ export function generateWorld(seed: number): World {
     door(placeObj('house', (td.id * 3 + 1) % 4, cx + 6, cy + 4, true), 'house', td.id, hn[1]);
     fillRect(cx + 8, cy + 7, 1, 3, T.TOWN);
     if (td.id === ZONE.PALETA) door(placeObj('lab', 0, cx - 3, cy + 6, true), 'lab', td.id, 'Laboratorio del Profesor Oak');
-    for (const [fx, fy] of [[cx - 13, cy + 8], [cx + 12, cy + 8], [cx - 13, cy - 4], [cx + 12, cy - 4]]) placeObj('flowerbed', (fx + fy) % 3, fx, fy, true);
+    for (const [fx, fy] of [[cx - 13, cy + 8], [cx + 12, cy + 8], [cx - 13, cy - 4], [cx + 12, cy - 4]]) placeObj('flowerbed', (fx + fy + td.id) % 4, fx, fy, true);
+    // jardines en las esquinas: macizo de flores rodeado por un seto en L
+    const free = (x: number, y: number) => inB(x, y) && !occ[I(x, y)] && terrain[I(x, y)] !== T.TOWN;
+    const corners: [number, number, number, number][] = [[x0, y0, 1, 1], [x0 + tw - 1, y0, -1, 1], [x0, y0 + th - 1, 1, -1], [x0 + tw - 1, y0 + th - 1, -1, -1]];
+    corners.forEach(([hx, hy, sx, sy], ci) => {
+      fillRect(Math.min(hx + sx, hx + sx * 3), Math.min(hy + sy, hy + sy * 2), 3, 2, T.FLOWERS);
+      for (let k = 0; k < 5; k++) { if (free(hx + sx * k, hy)) placeObj('hedge', (ci + k) % 3 === 0 ? 1 + (td.id % 2) : 0, hx + sx * k, hy, true); }
+      for (let k = 1; k < 4; k++) { if (free(hx, hy + sy * k)) placeObj('hedge', 0, hx, hy + sy * k, true); }
+    });
+    // bancos alrededor de la fuente y vallas blancas delante de las casas (con hueco en la puerta)
+    for (const bx of [cx - 3, cx + 2]) for (const by of [cy - 4, cy + 4]) if (!occ[I(bx, by)] && !occ[I(bx + 1, by)]) placeObj('bench', 0, bx, by, true);
+    for (const [hx, door] of [[cx - 12, cx - 9], [cx + 5, cx + 8]]) for (let x = hx; x < hx + 6; x++) if (x !== door && free(x, cy + 8)) placeObj('fence', 0, x, cy + 8, true);
+    // macizos de flores pisables junto a las fachadas
+    for (const [fx, fy] of [[cx - 12, cy + 7], [cx - 7, cy + 7], [cx + 5, cy + 7], [cx + 10, cy + 7], [cx - 12, cy - 5], [cx - 6, cy - 5], [cx + 5, cy - 5], [cx + 10, cy - 5]])
+      if (free(fx, fy)) placeObj('flowerpatch', (fx * 3 + fy + td.id) % 4, fx, fy, true);
     placeObj('fountain', 0, cx - 1, cy - 1, true);
     placeObj('lamp', 0, cx - 5, cy - 4, true); placeObj('lamp', 0, cx + 5, cy - 4, true);
     placeObj('lamp', 0, cx - 5, cy + 4, true); placeObj('lamp', 0, cx + 5, cy + 4, true);
