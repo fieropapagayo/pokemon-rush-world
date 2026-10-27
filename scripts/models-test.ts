@@ -9,7 +9,7 @@ for (const sp of SPECIES_LIST) {
   const dirs = new Set<string>(), walk = new Set<string>();
   const normal = hash(renderMon3D(sp.key, false).data);
   assert.notEqual(normal, hash(renderMon3D(sp.key, true).data), `${sp.key} shiny palette`);
-  assert(monScale(sp) * 28 < 32, `${sp.key} stays compact`);
+  assert(monScale(sp) * 28 < 44, `${sp.key} stays compact`);
   for (const shiny of [false, true]) for (let direction = 0; direction < 8; direction++) for (let frame = 0; frame < 8; frame++) {
     const art = renderMon3D(sp.key, shiny, direction, frame);
     const painted = art.data.reduce((n, v) => n + +(v !== 0), 0);

@@ -111,6 +111,7 @@ export class PlayerSession {
   dirtyCore = true; dirtyMons = true; lastCoreSent = 0;
   chatAt = 0; msgCount = 0; msgWindow = Date.now();
   zone = 0; zoneCheckAt = 0; seenCheckAt = 0;
+  cold = 0;   // ticks seguidos pasando frío
   combatUntil = 0; lastHurtAt = 0;
   throwAt = 0; autoBallAt = 0; autoHealAt = 0; incenseUntil = 0;
   lastSaveAt = Date.now(); joinedAt = Date.now();

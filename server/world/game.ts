@@ -41,7 +41,10 @@ interface Evt { x: number; y: number; d: any[]; only?: number; }
 export interface Drop { id: number; x: number; y: number; tier: number; owner: number; freeAt: number; until: number; }
 /** Campamento: tienda y hoguera donde el equipo descansa, se cura y se reanima poco a poco. */
 export interface Camp { id: number; owner: number; x: number; y: number; until: number; }
-export const CAMP = { MS: 120000, CD: 180000, R: 3.6, SAFE: 9 };
+// El campamento no caduca: se queda hasta que lo recoges (Z junto a él), te desconectas o montas otro.
+export const CAMP = { MS: 6 * 3600000, CD: 15000, R: 3.6, SAFE: 9, PICK: 4 };
+/** Frío: en invierno (zonas salvajes) y siempre en la nieve, el equipo pierde vida lejos de una hoguera. */
+export const COLD = { EVERY: 5000, DMG: 0.025, FLOOR: 0.2 };
 const CAMP_GROUND = new Set<number>([T.GRASS, T.FLOWERS, T.FOREST, T.SAND, T.DRYGRASS, T.SNOW, T.ROCK, T.HAUNT, T.HILL]);
 
 const r2 = (v: number) => Math.round(v * 100) / 100;
@@ -146,6 +149,7 @@ export class Game {
     this.duels.update();
     if (this.tickN % 5 === 0) this.updateDrops();
     if (this.tickN % 10 === 0) this.updateCamps();
+    if (this.tickN % Math.round(COLD.EVERY / 50) === 7) this.updateCold();
     if (this.tickN % SNAP_EVERY === 0) this.sendSnapshots();
     if (this.tickN % 10 === 0) this.periodic();
   }
@@ -233,6 +237,20 @@ export class Game {
   }
 
   medalXp(p: PlayerSession) { return 1 + MEDAL_XP * p.save.medals.length; }
+
+  /** Un salvaje ataca primero a los Pokémon del entrenador (el más cercano) y solo a él cuando no queda ninguno en pie. */
+  wildPick(m: MonEntity, p: PlayerSession): Target {
+    let best: MonEntity | null = null, bd = Infinity;
+    for (const a of p.team) { if (!a.alive) continue; const d = dist(a.x, a.y, m.x, m.y); if (d < bd) { bd = d; best = a; } }
+    return best || p;
+  }
+  /** Cuántos salvajes pueden ir a la vez a por un mismo entrenador: pocos en las primeras rutas. */
+  maxAttackers(zoneLvl: number) { return zoneLvl <= 10 ? 2 : zoneLvl <= 22 ? 3 : zoneLvl <= 40 ? 4 : 6; }
+  attackersOf(p: PlayerSession) {
+    let n = 0;
+    for (const w of this.monsNear(p.x, p.y, 16)) if (w.wild && w.alive && !w.boss && w.target && (w.target === p || (w.target instanceof MonEntity && w.target.owner === p))) n++;
+    return n;
+  }
 
   aggroRange(p: PlayerSession) {
     return 6.5 * (1 + p.upg('area') * 0.06) * (p.linkTier.has('sky_squadron') ? 1.2 : 1) * (p.stance === 'aggressive' ? 1.5 : 1);
@@ -497,7 +515,9 @@ export class Game {
     if (t && (!validT(t) || dist(m.x, m.y, t.x, t.y) > 13 || dist(m.x, m.y, m.homeX, m.homeY) > 18)) {
       m.target = null; t = null; if (!m.eventId) m.state = 'return';
     }
-    if (!t && m.state !== 'return' && (m.aggro || m.sp.temper === 'aggressive' || m.alpha || m.eventId) && now >= m.targetEvalAt) {
+    // si persigue al entrenador pero su equipo vuelve a estar en pie, cambia a los Pokémon
+    if (t && !(t instanceof MonEntity) && m.wild && !m.privateTo && now >= m.targetEvalAt) { m.targetEvalAt = now + 600; m.target = t = this.wildPick(m, t); }
+    if (!t && m.state !== 'return' && (m.aggro || m.alpha || m.eventId) && now >= m.targetEvalAt) {
       m.targetEvalAt = now + 600;
       const aggro = m.aggro ? 7.5 : m.eventId ? 6.5 : 4.5;
       let best: PlayerSession | null = null, bd = aggro;
@@ -506,9 +526,9 @@ export class Game {
         const d = dist(p.x, p.y, m.x, m.y);
         if (d < bd && this.zoneAt(p.x, p.y).kind !== 'town') { bd = d; best = p; }
       }
+      if (best && !m.eventId && !m.alpha && this.attackersOf(best) >= this.maxAttackers(ZONES[m.zone]?.lvl[1] || 10)) best = null;
       if (best) {
-        const allies = best.team.filter(a => a.alive);
-        m.target = allies.length && Math.random() < (m.aggro ? 0.55 : 0.6) ? allies[Math.floor(Math.random() * allies.length)] : best;
+        m.target = this.wildPick(m, best);
         m.state = 'chase';
         t = m.target;
       }
@@ -676,6 +696,8 @@ export class Game {
       if (this.storm && this.storm.until > this.now && this.storm.type === move.type && p.zone === this.storm.zone) dmg *= 1.5;
     } else {
       dmg *= BAL.WILD_DMG * (src.aggro ? BAL.AGGRO_ATK : 1);
+      const zl = ZONES[src.zone]?.lvl[1] || 30;
+      if (!src.boss && !src.roamer) dmg *= zl <= 8 ? 0.7 : zl <= 15 ? 0.85 : 1;   // las primeras rutas perdonan más
       if (src.boss || src.alpha) dmg *= 1.15;
     }
     return { dmg, crit, eff };
@@ -708,7 +730,7 @@ export class Game {
     if (move.drain && src.alive) src.hp = Math.min(src.maxHp, src.hp + dmg * move.drain);
     if (p && !isProc) this.linkProcs(src, tgt, move, dmg);
     if (tgt.wild && !tgt.boss) {
-      if (!tgt.target || Math.random() < 0.25) { tgt.target = src; if (tgt.state !== 'flee') tgt.state = 'chase'; }
+      if (!tgt.target || Math.random() < 0.25) { tgt.target = src instanceof MonEntity || !(src as any).team ? src : this.wildPick(tgt, src as any); if (tgt.state !== 'flee') tgt.state = 'chase'; }
       if (tgt.sp.temper === 'skittish' && tgt.hp < tgt.maxHp * 0.5 && tgt.state !== 'flee' && Math.random() < 0.5) { tgt.state = 'flee'; tgt.fleeUntil = now + 2500; }
     }
   }
@@ -1086,9 +1108,9 @@ export class Game {
     m.aggro = Math.random() < aggroChance(key, z.lvl[1], night) || alpha;
     if (roamer) { m.roamer = true; m.rare = true; m.hpMult = 3.2 * BAL.WILD_HP; m.iv = m.iv.map(v => Math.max(v, 20)); m.recalc(true); m.aggro = sp.rarity !== 'mythic'; }
     p.lastEncAt = now;
+    if (m.aggro && !roamer && !alpha && this.attackersOf(p) >= this.maxAttackers(z.lvl[1])) m.aggro = false;   // ya hay bastantes encima
     if (m.aggro) {
-      const allies = p.team.filter(a => a.alive);
-      m.target = allies.length && Math.random() < 0.5 ? allies[Math.floor(Math.random() * allies.length)] : p;
+      m.target = this.wildPick(m, p);
       m.state = 'chase'; m.targetEvalAt = now + 600;
     } else if (sp.temper === 'skittish' && Math.random() < 0.35) { m.state = 'flee'; m.fleeUntil = now + 1800; m.target = null; }
     else {
@@ -1158,14 +1180,45 @@ export class Game {
     return '';
   }
 
+  /** Recoge tu campamento si estás junto a él. Devuelve true si lo ha recogido. */
+  pickCamp(p: PlayerSession): boolean {
+    for (const [id, c] of this.camps) if (c.owner === p.id && dist(c.x, c.y, p.x, p.y) < CAMP.PICK) {
+      this.camps.delete(id); this.emit(c.x, c.y, ['x', 'campend', id]);
+      this.notify(p, '🎒 Has recogido el campamento. Pulsa Z en otro claro para montarlo de nuevo.', 'info');
+      return true;
+    }
+    return false;
+  }
+
+  /** Cada pocos segundos: daño por frío en invierno y en la nieve si no estás junto a una hoguera. */
+  updateCold() {
+    const now = this.now, winter = seasonAt(now) === 'winter';
+    for (const p of this.players.values()) {
+      if (p.hp <= 0 || p.duelId) continue;
+      const z = this.zoneAt(p.x, p.y);
+      const t = this.world.terrain[Math.floor(p.y) * this.world.w + Math.floor(p.x)];
+      const snowy = t === T.SNOW || /hielo|helad|nieve/i.test(z.name);
+      if (z.kind !== 'wild' || (!winter && !snowy)) { p.cold = 0; continue; }
+      if (p.campAt && now - p.campSeen < 1500) { if (p.cold > 2) this.notify(p, '🔥 Entras en calor junto a la hoguera.', 'good'); p.cold = 0; continue; }
+      if (p.team.some(m => m.alive && m.sp.types.includes('fire'))) { p.cold = 0; continue; }   // un Pokémon de fuego da calor
+      p.cold = (p.cold || 0) + 1;
+      if (p.cold === 1) this.notify(p, '❄ ¡Hace un frío helador! Tu equipo pierde vida poco a poco: acampa (Z) junto a una hoguera, vuelve a un pueblo o lleva un Pokémon de fuego.', 'bad');
+      for (const m of p.team) if (m.alive && !m.sp.types.includes('ice') && m.hp > m.maxHp * COLD.FLOOR) {
+        const d = Math.max(1, Math.round(m.maxHp * COLD.DMG));
+        m.hp = Math.max(Math.ceil(m.maxHp * COLD.FLOOR), m.hp - d);
+        this.emit(m.x, m.y, ['d', m.id, d, 8]);
+      }
+    }
+  }
+
   makeCamp(p: PlayerSession) {
-    for (const [id, c] of this.camps) if (c.owner === p.id) this.camps.delete(id);
+    for (const [id, c] of this.camps) if (c.owner === p.id) { this.camps.delete(id); this.emit(c.x, c.y, ['x', 'campend', id]); }
     const c: Camp = { id: this.nextCamp++, owner: p.id, x: p.x, y: p.y, until: this.now + CAMP.MS };
     this.camps.set(c.id, c);
     this.campCd.set(p.accountId, this.now + CAMP.CD);
     this.emit(p.x, p.y, ['x', 'camp', p.id, r2(p.x), r2(p.y)]);
     p.send({ t: 'camped', until: c.until });
-    this.notify(p, '🏕 Has montado el campamento. Quédate cerca de la hoguera: tu equipo descansa, se cura y los debilitados se recuperan poco a poco.', 'good');
+    this.notify(p, '🏕 Campamento montado: se queda aquí hasta que lo recojas (Z junto a la tienda). Junto a la hoguera tu equipo se cura, se reanima y entra en calor.', 'good');
   }
 
   /** Cada medio segundo: curación junto a la hoguera para el dueño y su grupo. */
@@ -1259,7 +1312,7 @@ export class Game {
     if (p.closed) return;
     if (!success) {
       p.send({ t: 'cap_fail', name: m.sp.name });
-      if (!fromBoss && m.alive) { m.target = p.team.find(t => t.alive) || p; m.state = 'chase'; if (m.sp.temper === 'skittish') { m.state = 'flee'; m.fleeUntil = this.now + 3000; } }
+      if (!fromBoss && m.alive) { m.target = this.wildPick(m, p); m.state = 'chase'; if (m.sp.temper === 'skittish') { m.state = 'flee'; m.fleeUntil = this.now + 3000; } }
       return;
     }
     if (!fromBoss) { if (m.rare) this.wevents.onRareResolved(m, p); this.removeMon(m); this.emit(m.x, m.y, ['rm', m.id]); }

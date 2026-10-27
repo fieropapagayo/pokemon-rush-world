@@ -6,7 +6,7 @@ import { monXpForLevel, trainerXpForLevel } from '../../shared/progression';
 import { TOWN_LIST } from '../../shared/world/worldgen';
 
 export interface MonSave { uid: string; sp: string; lvl: number; xp: number; iv: number[]; shiny: boolean; fr: number; caught: number; zone: number; nick?: string; fav?: boolean; ot?: string; nat?: number; }
-export interface Look { hat: number; shirt: number; skin: number; hair: number; }
+export interface Look { hat: number; shirt: number; skin: number; hair: number; pants?: number; cap?: number; style?: number; acc?: number; }
 export interface Bounty { id: string; kind: 'kill_type' | 'kill_zone' | 'catch'; target: string; n: number; prog: number; reward: { money: number; crystals: number; txp: number }; desc: string; }
 export interface Expedition { slot: number; id: string; uids: string[]; start: number; end: number; }
 

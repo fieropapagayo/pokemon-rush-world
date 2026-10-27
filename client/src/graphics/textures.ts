@@ -1,9 +1,9 @@
 // Registro de todas las texturas generadas en Phaser + caché de retratos para la interfaz.
 import Phaser from 'phaser';
 import { SPECIES_LIST, SPECIES } from '../../../shared/species';
-import { renderMon3D, monSheet, MON_FRAME } from './mon3d';
+import { renderMon3D, monSheet, MON_FRAME, MON_POSES } from './mon3d';
 import { objectArt } from './objectArt';
-import { trainerSheet, colsFromLook, NPC_LOOKS, TrainerCols, trainerPortrait } from './trainerArt';
+import { trainerSheet, colsFromLook, NPC_LOOKS, TrainerCols, trainerPortrait, lookKey } from './trainerArt';
 import { font3Sheet, font5Sheet, FONT3_CHARS, FONT5_CHARS } from './font';
 import { PixelArt } from './pixel';
 import { TRAINER_W, TRAINER_H } from './trainer3d';
@@ -49,8 +49,46 @@ export function ensureMonTexture(scene: Phaser.Scene, species: string, shiny: bo
   return key;
 }
 
+// Las vistas que faltan (al girar) se generan en segundo plano, una pose por fotograma, para no dar tirones.
+interface MonJob { scene: Phaser.Scene; species: string; shiny: boolean; direction: number; key: string; sheet: HTMLCanvasElement; frame: number; }
+const monJobs: MonJob[] = [], monQueued = new Set<string>();
+const NEAR_DIRS = [0, 1, 7, 2, 6, 3, 5, 4];
+function queueMonSheet(scene: Phaser.Scene, species: string, shiny: boolean, direction: number) {
+  const key = `mon3d:${species}:${+shiny}:${direction}`;
+  if (scene.textures.exists(key) || monQueued.has(key)) return;
+  monQueued.add(key);
+  const sheet = document.createElement('canvas'); sheet.width = MON_FRAME * MON_POSES; sheet.height = MON_FRAME;
+  monJobs.push({ scene, species, shiny, direction, key, sheet, frame: 0 });
+}
+/** Textura de la vista pedida, o la más parecida ya lista mientras se genera la buena. */
+export function monTextureFor(scene: Phaser.Scene, species: string, shiny: boolean, direction: number): string {
+  const key = `mon3d:${species}:${+shiny}:${direction}`;
+  if (scene.textures.exists(key)) return key;
+  for (const d of NEAR_DIRS) {
+    const k = `mon3d:${species}:${+shiny}:${(direction + d) % 8}`;
+    if (scene.textures.exists(k)) { queueMonSheet(scene, species, shiny, direction); return k; }
+  }
+  const k = ensureMonTexture(scene, species, shiny, direction);
+  for (let d = 0; d < 8; d++) queueMonSheet(scene, species, shiny, d);   // el resto de vistas, poco a poco
+  return k;
+}
+/** Llamar una vez por fotograma: genera poses pendientes durante ~budget ms. */
+export function pumpMonTextures(budget = 4) {
+  const t0 = performance.now();
+  while (monJobs.length && performance.now() - t0 < budget) {
+    const j = monJobs[0];
+    if (j.scene.textures.exists(j.key) || !j.scene.sys.isActive()) { monJobs.shift(); monQueued.delete(j.key); continue; }
+    j.sheet.getContext('2d')!.drawImage(renderMon3D(j.species, j.shiny, j.direction, j.frame).toCanvas(), j.frame * MON_FRAME, 0);
+    if (++j.frame >= MON_POSES) {
+      monJobs.shift(); monQueued.delete(j.key);
+      addSheet(j.scene, j.key, j.sheet, MON_FRAME, MON_FRAME);
+      j.scene.textures.get(j.key).setFilter(Phaser.Textures.FilterMode.LINEAR);
+    }
+  }
+}
+
 export function ensureTrainerTexture(scene: Phaser.Scene, look: any): string {
-  const key = 'tr:' + [look.hat, look.shirt, look.skin, look.hair].join('-');
+  const key = 'tr:' + lookKey(look);
   if (!scene.textures.exists(key)) addSheet(scene, key, trainerSheet(colsFromLook(look)), TRAINER_W, TRAINER_H);
   return key;
 }

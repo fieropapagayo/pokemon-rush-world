@@ -16,7 +16,7 @@ import {
 import { DUNGEON_DEFS } from '../../../shared/world/worldgen';
 import { STATUS_NAMES } from '../../../shared/constants';
 import { monURL, trainerURL } from '../graphics/textures';
-import { HAT_COLORS, SHIRT_COLORS, SKIN_COLORS, HAIR_COLORS } from '../graphics/trainerArt';
+import { lookRowsHTML, randomLook } from '../graphics/trainerArt';
 import { iconURL } from '../graphics/iconArt';
 import { audio } from '../systems/audio';
 import { statValueClient } from './util';
@@ -46,7 +46,7 @@ export class Panels {
   wins = new Map<string, Win>();
   order: string[] = [];
   teamSel: string | null = null;
-  teamFilter = ''; teamSort: 'lvl' | 'cp' | 'iv' | 'dex' | 'new' = 'lvl';
+  teamFilter = ''; teamSort: 'lvl' | 'cp' | 'iv' | 'dex' | 'new' | 'fr' = 'lvl';
   teamTypeFilter = 'all';
   dexSel: string | null = null; dexShiny = false; dexFilter = ''; dexTypeFilter = ''; dexTab: 'all' | 'caught' | 'missing' | 'shiny' | 'legend' | 'season' = 'all';
   viewDir = 1; viewPose: 'idle' | 'walk' | 'attack' = 'walk'; viewSpin = false; viewStep = 0; trainerDir = 0;
@@ -191,6 +191,7 @@ export class Panels {
       if (this.teamSort === 'cp') return monCP(SPECIES[b.sp], b.lvl, b.iv) - monCP(SPECIES[a.sp], a.lvl, a.iv);
       if (this.teamSort === 'iv') return (b.iv[0] + b.iv[1] + b.iv[2] + b.iv[3]) - (a.iv[0] + a.iv[1] + a.iv[2] + a.iv[3]);
       if (this.teamSort === 'dex') return SPECIES[a.sp].dex - SPECIES[b.sp].dex;
+      if (this.teamSort === 'fr') return (b.fr || 0) - (a.fr || 0);
       return b.caught - a.caught;
     });
     const sel = this.teamSel ? monByUid(this.teamSel) : null;
@@ -250,6 +251,7 @@ export class Panels {
               <option value="iv" ${this.teamSort === 'iv' ? 'selected' : ''}>% IV</option>
               <option value="dex" ${this.teamSort === 'dex' ? 'selected' : ''}>Nº</option>
               <option value="new" ${this.teamSort === 'new' ? 'selected' : ''}>Recientes</option>
+              <option value="fr" ${this.teamSort === 'fr' ? 'selected' : ''}>Amistad (♥)</option>
             </select>
             <select id="tfilter-type" style="background:#10141f;color:#a8e0ff;border:1px solid #334455;border-radius:4px;padding:2px 4px;font-size:11px">
               <option value="all">Tipo...</option>
@@ -341,7 +343,7 @@ export class Panels {
     const fam = sp.family, candies = c.candies[fam] || 0, cost = candyCostForLevel(m.lvl);
     let cost5 = 0;
     for (let k = 0; k < 5 && m.lvl + k < MAX_LEVEL; k++) cost5 += candyCostForLevel(m.lvl + k);
-    const statRow = (n: string, v: number, iv: number, max: number) => `<div class="stat"><span>${n}</span><div class="bar"><i style="width:${Math.min(100, v / max * 100)}%;background:#58a8f0"></i></div><span>${v}</span></div><div class="muted" style="font-size:11px;margin:-3px 0 2px 76px">IV ${iv}/15</div>`;
+    const statRow = (n: string, v: number, iv: number, max: number) => `<div class="stat"><span>${n}</span><div class="bar"><i style="width:${Math.min(100, v / max * 100)}%;background:#58a8f0"></i></div><span>${v}</span></div><div class="muted" style="font-size:11px;margin:-3px 0 2px 76px">IV ${iv}/31</div>`;
     const mvRow = (x: any) => x ? `<div class="row" style="font-size:13px">${typeTag(x.type)}<b>${esc(x.name)}</b><span class="muted">Pot. ${x.power} · ${x.kind === 'melee' ? 'cuerpo a cuerpo' : x.kind === 'proj' ? 'proyectil' : x.kind === 'aoe' ? 'área' : x.kind === 'nova' ? 'área propia' : x.kind === 'beam' ? 'rayo' : 'especial'} · ${x.cd}s</span></div>` : '';
     const ivSum = m.iv[0] + m.iv[1] + m.iv[2] + m.iv[3];
     const ivPct = Math.round(ivSum / 124 * 100);
@@ -539,7 +541,8 @@ export class Panels {
       return nameMatch || dexMatch || typeMatch;
     }).sort((a, b) => a.dex - b.dex);
 
-    body.innerHTML = `<div class="row" style="gap:12px;margin-bottom:8px"><b>Vistos ${seen}</b><b class="gold">Capturados ${caught}/${SPECIES_LIST.length}</b><b>Shiny ${shiny}</b><div class="bar xp grow"><i style="width:${caught / SPECIES_LIST.length * 100}%"></i></div></div>
+    const pct = Math.round(caught / SPECIES_LIST.length * 100);
+    body.innerHTML = `<div class="row" style="gap:8px;margin-bottom:8px;align-items:center;flex-wrap:wrap"><span class="tag" style="background:#1a2838;color:#a8d8ff;font-size:11px">Vistos ${seen}</span><span class="tag" style="background:#2e220a;color:#ffd866;font-size:11px;font-weight:bold">Capturados ${caught}/${SPECIES_LIST.length} (${pct}%)</span><span class="tag" style="background:#2d142a;color:#ff98e0;font-size:11px">✦ Shiny ${shiny}</span><div class="bar xp grow" style="height:7px;min-width:80px"><i style="width:${pct}%"></i></div></div>
       <div class="row" style="gap:4px;margin-bottom:6px;flex-wrap:wrap">
         ${[['all', `Todos (${SPECIES_LIST.length})`], ['caught', `✔ Capturados (${caught})`], ['missing', `？ Faltan (${SPECIES_LIST.length - caught})`], ['shiny', `✦ Shiny (${shiny})`], ['legend', '★ Leyendas'], ['season', `${SEASON_ICONS[curSeason]} ${SEASON_NAMES[curSeason]}`]].map(([k, n]) => `<button class="btn tiny ${this.dexTab === k ? 'gold' : 'gray'}" data-dtab="${k}" style="font-size:10px;padding:2px 6px">${n}</button>`).join('')}
       </div>
@@ -630,7 +633,7 @@ export class Panels {
       <details class="card" style="margin-top:6px"><summary style="cursor:pointer;font-size:12px"><b class="gold">🍬 Caramelos por familia (${candyFams.length} familias)</b> <span class="muted">· Suben de nivel a esa familia</span></summary>
         <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(140px,1fr));margin-top:6px">${candyFams.map(f => `<div class="card row" style="padding:3px 6px;font-size:12px"><img class="px" src="${monURL(FAMILIES[f][0], false, 1)}" style="width:26px">${esc(SPECIES[FAMILIES[f][0]].name)} <b class="grow" style="text-align:right">${c.candies[f]}</b></div>`).join('') || '<div class="muted" style="font-size:12px">Aún no tienes caramelos. Transfiere Pokémon repetidos desde el Equipo.</div>'}</div>
       </details>`;
-    body.querySelectorAll<HTMLElement>('[data-invtab]').forEach(b => b.onclick = () => { this.invTab = b.dataset.invtab as any; this.renderInv(body); });
+    body.querySelectorAll<HTMLElement>('[data-invtab]').forEach(b => b.onclick = () => { this.invTab = b.dataset.invtab as any; audio.play('ui'); this.renderInv(body); });
     body.querySelectorAll<HTMLElement>('[data-use]').forEach(b => b.onclick = () => net.send({ t: 'use', item: b.dataset.use }));
     body.querySelectorAll<HTMLElement>('[data-sell1]').forEach(b => b.onclick = () => { net.send({ t: 'sell', item: b.dataset.sell1, qty: 1 }); audio.play('coin'); });
     body.querySelectorAll<HTMLElement>('[data-evoteam]').forEach(b => b.onclick = () => { this.teamTypeFilter = 'evo'; this.open('team'); this.rerender(['team']); });
@@ -663,7 +666,7 @@ export class Panels {
         <div style="text-align:right">${max ? '<b class="gold">MÁX</b>' : `<div class="cost"><img src="${curIcon(u.cur)}">${fmt(cost)}</div><button class="btn small ${ok ? 'green' : 'gray'}" data-up="${u.id}" ${ok ? '' : 'disabled'}>Mejorar</button>`}</div></div>`;
       }).join('')}</div>
       <div class="muted" style="font-size:12px;margin-top:8px">Las mejoras son permanentes y se aplican a todo tu equipo. Los costes crecen exponencialmente: combina distintas mejoras para progresar más rápido.</div>`;
-    body.querySelectorAll<HTMLElement>('[data-tab]').forEach(b => b.onclick = () => { this.upgTab = b.dataset.tab as any; this.renderUpg(body); });
+    body.querySelectorAll<HTMLElement>('[data-tab]').forEach(b => b.onclick = () => { this.upgTab = b.dataset.tab as any; audio.play('ui'); this.renderUpg(body); });
     body.querySelectorAll<HTMLElement>('[data-up]').forEach(b => b.onclick = () => net.send({ t: 'upgrade', id: b.dataset.up }));
     const ub = body.querySelector('#ubest') as HTMLElement | null;
     if (ub && affordable[0]) ub.onclick = () => net.send({ t: 'upgrade', id: affordable[0].id });
@@ -691,10 +694,10 @@ export class Panels {
       <div class="muted" style="font-size:12px">Elige hasta 3 Pokémon de reserva (no del equipo). Más nivel = mejores recompensas. Se calcula en el servidor aunque te desconectes.</div>
       <div class="grid boxgrid" style="margin:6px 0">${reserve.map(m => `<div class="card boxcell ${this.expPick.includes(m.uid) ? 'sel' : ''}" data-pk="${m.uid}"><img src="${monURL(m.sp, m.shiny, 1)}">${esc(SPECIES[m.sp].name)}<br><span class="muted">Nv.${m.lvl}</span></div>`).join('') || '<div class="muted">No tienes Pokémon de reserva. ¡Captura más!</div>'}</div>
       <div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn green" id="estart" ${this.expPick.length && c.expeditions.length < slots ? '' : 'disabled'}>Enviar expedición (${this.expPick.length}/3)</button><button class="btn small gold" id="equick" ${reserve.length && c.expeditions.length < slots ? '' : 'disabled'} title="Selecciona los 3 mejores de reserva y envía la expedición actual en 1 clic">🚀 Envío rápido (3 mejores)</button><button class="btn small gray" id="eauto" ${reserve.length && c.expeditions.length < slots ? '' : 'disabled'}>⚡ Elegir 3 mejores</button>${c.expeditions.some((e: any) => now >= e.end) ? `<button class="btn small purple" id="eclaimall">🎉 Recoger listas</button>` : ''}</div>`;
-    body.querySelectorAll<HTMLElement>('[data-claim]').forEach(b => b.onclick = () => net.send({ t: 'exp_claim', slot: parseInt(b.dataset.claim!, 10) }));
+    body.querySelectorAll<HTMLElement>('[data-claim]').forEach(b => b.onclick = () => { net.send({ t: 'exp_claim', slot: parseInt(b.dataset.claim!, 10) }); audio.play('chest'); });
     body.querySelectorAll<HTMLElement>('[data-et]').forEach(b => b.onclick = () => { this.expType = b.dataset.et!; this.renderExp(body); });
     body.querySelectorAll<HTMLElement>('[data-pk]').forEach(b => b.onclick = () => { const u = b.dataset.pk!; if (this.expPick.includes(u)) this.expPick = this.expPick.filter(x => x !== u); else if (this.expPick.length < 3) this.expPick.push(u); this.renderExp(body); });
-    (body.querySelector('#estart') as HTMLElement).onclick = () => { net.send({ t: 'exp_start', id: this.expType, uids: this.expPick }); this.expPick = []; };
+    (body.querySelector('#estart') as HTMLElement).onclick = () => { net.send({ t: 'exp_start', id: this.expType, uids: this.expPick }); this.expPick = []; audio.play('sparkle'); };
     const equick = body.querySelector('#equick') as HTMLElement | null;
     if (equick) equick.onclick = () => { const pick = reserve.slice(0, 3).map(m => m.uid); if (pick.length) { net.send({ t: 'exp_start', id: this.expType, uids: pick }); this.expPick = []; audio.play('sparkle'); } };
     const eauto = body.querySelector('#eauto') as HTMLElement | null;
@@ -771,11 +774,12 @@ export class Panels {
       marks.push(`<div class="wm-mark" style="${pct(S.waypoint!.x, S.waypoint!.y)};color:#ffd860;transform:translate(-50%,-140%)">📍 ${Math.round(S.routeLen)} m</div>`);
     }
     const lastTown = c.towns.length ? w.towns.find(t => t.id === c.towns[c.towns.length - 1]) : null;
+    const clearWpBtn = S.waypoint ? '<button class="btn tiny gray" id="mclear-wp" title="Quitar el destino actual de la brújula">✕ Quitar destino</button>' : '';
     const bossRows = S.bosses.filter(b => b.x < 400).map((b, idx) => {
       const spKey = b.sp || Object.keys(SPECIES).find(k => (b.name || '').toLowerCase().includes(SPECIES[k].name.toLowerCase())) || 'snorlax';
       return `<div class="row" style="font-size:11px;padding:2px 4px;background:#ffffff06;border-radius:4px;gap:5px"><img class="px" src="${monURL(spKey, false, 1)}" style="width:22px;height:22px"><b class="grow">${esc(b.name)} <span class="muted">Nv.${b.lvl}</span></b><span style="color:${b.alive ? '#68e888' : '#aaa'}">${b.alive ? '● Vivo' : '⏳ ' + time(b.respawn)}</span><button class="btn tiny" data-boss="${idx}" style="padding:1px 5px;font-size:10px" title="Marcar rumbo hacia ${esc(b.name)}">⌖ Ir</button></div>`;
     }).join('');
-    body.innerHTML = `<div class="row" style="justify-content:space-between;flex-wrap:wrap;margin-bottom:4px"><p class="map-tip" style="margin:0">Clic en el mapa: marcar destino · Centros registrados: viaje rápido · La brújula indica la dirección.</p><div class="row" style="gap:6px">${lastTown ? `<button class="btn tiny gold" id="mfast" title="Viaje rápido a ${esc(lastTown.name)}">✈ ${esc(lastTown.name)}</button>` : ''}<span class="tag" style="background:#25324c;color:#ffe5a4;font-size:11px">${SEASON_ICONS[seasonAt(net.serverNow())]} Estación: ${SEASON_NAMES[seasonAt(net.serverNow())]} (${time(seasonLeft(net.serverNow()))})</span></div></div>
+    body.innerHTML = `<div class="row" style="justify-content:space-between;flex-wrap:wrap;margin-bottom:4px"><p class="map-tip" style="margin:0">Clic en el mapa: marcar destino · Centros registrados: viaje rápido · La brújula indica la dirección.</p><div class="row" style="gap:6px">${clearWpBtn}${lastTown ? `<button class="btn tiny gold" id="mfast" title="Viaje rápido a ${esc(lastTown.name)}">✈ ${esc(lastTown.name)}</button>` : ''}<span class="tag" style="background:#25324c;color:#ffe5a4;font-size:11px">${SEASON_ICONS[seasonAt(net.serverNow())]} Estación: ${SEASON_NAMES[seasonAt(net.serverNow())]} (${time(seasonLeft(net.serverNow()))})</span></div></div>
       <div class="zone-legend"><span>Dificultad para tu equipo (Nv.${teamLvl}):</span><span><i style="background:#5fd07a"></i>Fácil</span><span><i style="background:#b8e070"></i>Adecuada</span><span><i style="background:#f2d050"></i>Exigente</span><span><i style="background:#f08a40"></i>Peligrosa</span><span><i style="background:#f04848"></i>Mortal</span></div><div class="row" style="align-items:flex-start;gap:12px;flex-wrap:wrap"><div class="worldmap" style="flex:1 1 520px;max-width:620px"></div><div style="flex:1 1 280px" class="col">${bossRows ? `<details class="card" style="margin-bottom:4px"><summary class="row" style="cursor:pointer;font-size:12px"><b class="gold grow">☠ Jefes de Mundo (${S.bosses.filter(b => b.x < 400 && b.alive).length}/${S.bosses.filter(b => b.x < 400).length} vivos)</b></summary><div class="col" style="gap:3px;margin-top:5px">${bossRows}</div></details>` : ''}<b>Progreso regional</b><div class="row" style="margin:2px 0"><input id="mapf" placeholder="🔍 Filtrar por Pokémon, tipo o ruta…" value="${esc(this.mapFilter)}" style="flex:1;padding:4px 7px;background:#10141f;color:#fff;border:1px solid #334;border-radius:3px;font-size:11px" /></div>${zoneRows || '<div class="muted" style="font-size:12px;padding:8px 0">Ninguna zona coincide con tu búsqueda.</div>'}</div></div>`;
     const wm = body.querySelector('.worldmap') as HTMLElement;
     wm.appendChild(cv); wm.insertAdjacentHTML('beforeend', marks.join(''));
@@ -798,6 +802,8 @@ export class Panels {
       };
       mf.onkeydown = e => e.stopPropagation();
     }
+    const mclear = body.querySelector('#mclear-wp') as HTMLElement | null;
+    if (mclear) mclear.onclick = () => { S.waypoint = null; S.route = null; audio.play('ui'); this.renderMap(body); };
     const mfast = body.querySelector('#mfast') as HTMLElement | null;
     if (mfast && lastTown) mfast.onclick = () => { net.send({ t: 'travel', town: lastTown.id }); this.close('map'); };
     const overworldBosses = S.bosses.filter(b => b.x < 400);
@@ -854,11 +860,15 @@ export class Panels {
         <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:5px;margin-top:6px">${dailyTable.map(x => `<div class="card" style="padding:5px 7px;font-size:11px;border-color:${x.d === curDay ? '#ffd866' : x.d < curDay ? '#48a868' : '#2a3042'};background:${x.d === curDay ? '#2e2412' : '#141824'}"><div class="row" style="justify-content:space-between"><b class="${x.d === curDay ? 'gold' : ''}">Día ${x.d}</b><span>${x.d < curDay ? '✔' : x.d === curDay ? '★ Hoy' : ''}</span></div><div class="muted" style="font-size:10px;margin-top:2px">${esc(x.r)}</div></div>`).join('')}</div>
       </details>
       <div class="row" style="justify-content:space-between"><b>Misiones principales (${c.claimed.length}/${QUESTS.length})</b>${readyQ.length + readyB.length > 0 ? `<button class="btn small gold" id="qclaimall">🎉 Cobrar todas (${readyQ.length + readyB.length})</button>` : ''}</div>
-      <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(280px,1fr));margin:6px 0">${QUESTS.map((q, i) => {
+      <div class="quest-grid">${QUESTS.map((q, i) => {
         const claimed = c.claimed.includes(q.id); const v = statValueClient(q.stat); const done = v >= q.n;
         const locked = !claimed && i > firstOpen + 2;
         const r = q.reward; const rw = [r.money ? `${r.money} ₽` : '', r.crystals ? `${r.crystals} cristales` : '', r.txp ? `${r.txp} EXP` : '', ...(r.items ? Object.entries(r.items).map(([k, n]) => `${ITEMS[k].name} x${n}`) : [])].filter(Boolean).join(', ');
-        return `<div class="card" style="${locked ? 'opacity:.4' : ''}"><div class="row"><b class="grow">${claimed ? '✔ ' : ''}${esc(q.name)}</b>${done && !claimed ? `<button class="btn tiny green" data-q="${q.id}">Cobrar</button>` : ''}</div><div style="font-size:12px">${locked ? '???' : esc(q.desc)}</div><div class="bar xp" style="margin:4px 0"><i style="width:${claimed ? 100 : Math.min(100, v / q.n * 100)}%"></i></div><div class="muted" style="font-size:11px">${Math.min(v, q.n)}/${q.n} · ${esc(rw)}</div></div>`;
+        const ICON: Record<string, string> = { kills: '⚔', catches: '◓', team: '👥', money: '💰', zones: '🧭', evolves: '✨', bosses: '☠', chests: '🎁', dungeons: '🕳', links: '🔗', shinies: '✦', events: '⚡', expeditions: '🚀', upgrades: '⬆', dex: '📖', towns: '🏘', tlvl: '★' };
+        const pct = claimed ? 100 : Math.min(100, v / q.n * 100), st = claimed ? 'claimed' : done ? 'ready' : locked ? 'locked' : 'active';
+        const chips = [r.money ? `<span class="qchip money">₽ ${r.money}</span>` : '', r.crystals ? `<span class="qchip crys">◆ ${r.crystals}</span>` : '', r.txp ? `<span class="qchip exp">EXP ${r.txp}</span>` : '', ...(r.items ? Object.entries(r.items).map(([k, n]) => `<span class="qchip item">${esc(ITEMS[k].name)} ×${n}</span>`) : [])].join('');
+        void rw;
+        return `<div class="quest-card ${st}"><div class="qicon">${locked ? '🔒' : claimed ? '✔' : ICON[q.stat] || '★'}</div><div class="qbody"><div class="qhead"><span class="qnum">${String(i + 1).padStart(2, '0')}</span><b>${esc(q.name)}</b>${done && !claimed ? `<button class="btn tiny gold" data-q="${q.id}">Cobrar ✦</button>` : claimed ? '<span class="qdone">Completada</span>' : ''}</div><div class="qdesc">${locked ? 'Completa las misiones anteriores para descubrirla.' : esc(q.desc)}</div><div class="qbar"><i style="width:${pct}%"></i><span>${Math.min(v, q.n)} / ${q.n}</span></div><div class="qchips">${chips}</div></div></div>`;
       }).join('')}</div>
       <b>Encargos repetibles</b>
       <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(280px,1fr));margin:6px 0">${(c.bounties || []).map((b: any) => `<div class="card"><div class="row"><b class="grow">⚑ ${esc(b.desc)}</b>${b.prog >= b.n ? `<button class="btn tiny green" data-b="${b.id}">Cobrar</button>` : ''}</div><div class="bar xp" style="margin:4px 0"><i style="width:${Math.min(100, b.prog / b.n * 100)}%"></i></div><div class="muted" style="font-size:11px">${Math.min(b.prog, b.n)}/${b.n} · ${b.reward.money} ₽, ${b.reward.crystals} cristales, ${b.reward.txp} EXP</div></div>`).join('')}</div>
@@ -903,8 +913,8 @@ export class Panels {
           <span class="grow"></span><button class="btn tiny gray" id="rrefresh">🔄 Actualizar</button>
         </div>
         <div class="col" style="gap:4px">${rows.length ? rows.map((r, i) => `<div class="card row" style="border-color:${r.n === S.core?.name ? '#ffd866' : ''}"><b style="width:28px;color:${i === 0 ? '#ffd866' : i === 1 ? '#d0d8e8' : i === 2 ? '#e09860' : '#889'}">${i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`}</b><b class="grow">${esc(r.n)} ${r.n === S.core?.name ? '<span class="gold">(tú)</span>' : ''}</b><span class="gold">${fmt(r.v)} ${unit}</span></div>`).join('') : '<div class="card muted" style="padding:16px;text-align:center">Cargando clasificación del servidor...</div>'}</div>`;
-      body.querySelectorAll<HTMLElement>('[data-stab]').forEach(b => b.onclick = () => { this.socialTab = b.dataset.stab as any; this.renderSocial(body); });
-      body.querySelectorAll<HTMLElement>('[data-rcat]').forEach(b => b.onclick = () => { this.rankCat = b.dataset.rcat as any; this.renderSocial(body); });
+      body.querySelectorAll<HTMLElement>('[data-stab]').forEach(b => b.onclick = () => { this.socialTab = b.dataset.stab as any; audio.play('ui'); this.renderSocial(body); });
+      body.querySelectorAll<HTMLElement>('[data-rcat]').forEach(b => b.onclick = () => { this.rankCat = b.dataset.rcat as any; audio.play('ui'); this.renderSocial(body); });
       const rr = body.querySelector('#rrefresh') as HTMLElement | null; if (rr) rr.onclick = () => net.send({ t: 'rank' });
       return;
     }
@@ -913,7 +923,7 @@ export class Panels {
       const list = S.duelTop || [];
       body.innerHTML = `${tabs}
         <div class="col" style="gap:4px">${list.length ? list.map((r, i) => `<div class="card row"><b style="width:28px">${i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`}</b><b class="grow">${esc(r.n)} ${r.n === S.core?.name ? '<span class="gold">(tú)</span>' : ''}</b><span class="muted" style="font-size:12px">${r.w} V · ${r.l} D</span><b class="gold">Elo ${r.elo}</b></div>`).join('') : '<div class="card muted" style="padding:16px;text-align:center">No hay entrenadores en la tabla PvP ahora mismo.</div>'}</div>`;
-      body.querySelectorAll<HTMLElement>('[data-stab]').forEach(b => b.onclick = () => { this.socialTab = b.dataset.stab as any; this.renderSocial(body); });
+      body.querySelectorAll<HTMLElement>('[data-stab]').forEach(b => b.onclick = () => { this.socialTab = b.dataset.stab as any; audio.play('ui'); this.renderSocial(body); });
       return;
     }
     body.innerHTML = `${tabs}<div class="row" style="align-items:flex-start;gap:12px;flex-wrap:wrap">
@@ -929,7 +939,7 @@ export class Panels {
           <div class="grid" style="grid-template-columns:repeat(3,1fr);margin:6px 0">${this.inspect.team.map((m: any) => `<div class="card" style="text-align:center;font-size:12px"><img class="px" src="${monURL(m.sp, m.shiny, 1)}" style="width:48px"><br>${m.shiny ? '✦' : ''}${esc(SPECIES[m.sp].name)} Nv.${m.lvl}</div>`).join('')}</div>
           <div class="muted" style="font-size:12px">Pokédex ${this.inspect.dex} · Jefes ${this.inspect.bosses} · Derrotados ${fmt(this.inspect.kills)}${this.inspect.links.length ? ' · Links: ' + this.inspect.links.map((l: string) => LINK_MAP[l]?.name).join(', ') : ''}</div>` : ''}
       </div></div>`;
-    body.querySelectorAll<HTMLElement>('[data-stab]').forEach(b => b.onclick = () => { this.socialTab = b.dataset.stab as any; this.renderSocial(body); });
+    body.querySelectorAll<HTMLElement>('[data-stab]').forEach(b => b.onclick = () => { this.socialTab = b.dataset.stab as any; audio.play('ui'); this.renderSocial(body); });
     body.querySelectorAll<HTMLElement>('[data-insp]').forEach(b => b.onclick = () => net.send({ t: 'inspect', id: parseInt(b.dataset.insp!, 10) }));
     body.querySelectorAll<HTMLElement>('[data-inv]').forEach(b => b.onclick = () => net.send({ t: 'invite', id: parseInt(b.dataset.inv!, 10) }));
     body.querySelectorAll<HTMLElement>('[data-duel]').forEach(b => b.onclick = () => net.send({ t: 'duel_req', id: parseInt(b.dataset.duel!, 10) }));
@@ -1043,10 +1053,7 @@ export class Panels {
         <div class="row" style="gap:12px;align-items:center">
           <img id="set-avatar" class="px" src="${trainerURL(look, 3, this.trainerDir, tStep)}" style="width:48px;height:72px;background:#0003;border-radius:6px;padding:4px" alt="Entrenador" />
           <div class="looks grow" style="display:grid;grid-template-columns:46px 1fr;gap:5px;align-items:center;font-size:12px">
-            <span>Gorra</span><div class="swatches" data-f="hat">${HAT_COLORS.map((c, i) => `<div class="sw ${look.hat === i ? 'sel' : ''}" style="background:${c}" data-i="${i}"></div>`).join('')}</div>
-            <span>Ropa</span><div class="swatches" data-f="shirt">${SHIRT_COLORS.map((c, i) => `<div class="sw ${look.shirt === i ? 'sel' : ''}" style="background:${c}" data-i="${i}"></div>`).join('')}</div>
-            <span>Piel</span><div class="swatches" data-f="skin">${SKIN_COLORS.map((c, i) => `<div class="sw ${look.skin === i ? 'sel' : ''}" style="background:${c}" data-i="${i}"></div>`).join('')}</div>
-            <span>Pelo</span><div class="swatches" data-f="hair">${HAIR_COLORS.map((c, i) => `<div class="sw ${look.hair === i ? 'sel' : ''}" style="background:${c}" data-i="${i}"></div>`).join('')}</div>
+            ${lookRowsHTML(look)}
           </div>
         </div>
       </div>
@@ -1074,12 +1081,7 @@ export class Panels {
     (body.querySelector('#trot-set') as HTMLElement).onclick = () => { this.trainerDir = (this.trainerDir + 1) % 3; audio.play('ui'); this.renderSettings(body); };
     (body.querySelector('#trand-set') as HTMLElement).onclick = () => {
       if (!S.core) return;
-      const l = {
-        hat: Math.floor(Math.random() * HAT_COLORS.length),
-        shirt: Math.floor(Math.random() * SHIRT_COLORS.length),
-        skin: Math.floor(Math.random() * SKIN_COLORS.length),
-        hair: Math.floor(Math.random() * HAIR_COLORS.length),
-      };
+      const l = randomLook();
       S.core.look = l;
       net.send({ t: 'look', look: l });
       bus.emit('core');
@@ -1104,9 +1106,9 @@ export class Panels {
       <kbd>WASD</kbd>/<kbd>Flechas</kbd> o clic en el suelo para moverse · <kbd>E</kbd> interactuar · <kbd>Clic</kbd> seleccionar Pokémon salvaje · <kbd>Tab</kbd> siguiente objetivo<br>
       <kbd>R</kbd> Diario de campo: 12 investigaciones con recompensas · <kbd>M</kbd> mapa: marca destinos para la brújula.<br>
       <kbd>G</kbd> Gimnasios: localiza a los líderes, desafíalos y consigue seis medallas con mejoras permanentes.<br>
-      <kbd>C</kbd> o <kbd>clic derecho</kbd> lanzar Ball · <kbd>B</kbd> cambiar Ball · <kbd>1-4</kbd> habilidades · <kbd>Espacio</kbd> esquiva<br>
+      <kbd>C</kbd> o <kbd>clic derecho</kbd> lanzar Ball · <kbd>B</kbd> cambiar Ball · <kbd>Q</kbd> curar equipo (Poción) · <kbd>1-4</kbd> habilidades · <kbd>Espacio</kbd> esquiva<br>
       <kbd>T</kbd> equipo · <kbd>P</kbd> Pokédex · <kbd>I</kbd> mochila · <kbd>U</kbd> mejoras · <kbd>X</kbd> expediciones · <kbd>M</kbd> mapa · <kbd>J</kbd> misiones · <kbd>O</kbd> social · <kbd>N</kbd> novedades · <kbd>Enter</kbd> chat · <kbd>Esc</kbd> cerrar/ajustes<br>
-      <kbd>F</kbd> huir de los salvajes que te persiguen · <kbd>Z</kbd> encender hoguera de campamento (cura a tus aliados) · <kbd>V</kbd> modo del equipo (Pasivo / Neutral / Ataque / Agresivo) · <kbd>K</kbd> Tarjeta de Entrenador · <kbd>/duelo</kbd> · <kbd>/intercambio</kbd> · <kbd>/ranking</kbd> · <kbd>/acampar</kbd>
+      <kbd>F</kbd> huir de los salvajes que te persiguen · <kbd>Z</kbd> encender hoguera de campamento (cura a tus aliados) · <kbd>V</kbd> modo del equipo (Pasivo / Neutral / Ataque / Agresivo) · <kbd>K</kbd> Tarjeta de Entrenador · <kbd>/duelo</kbd> · <kbd>/intercambio</kbd> · <kbd>/ranking</kbd> · <kbd>/acampar</kbd> · <kbd>/pocion</kbd> · <kbd>/dex</kbd> · <kbd>/equipo</kbd> · <kbd>/mapa</kbd>
       <div class="hr"></div>
       <b class="gold">Cómo se juega</b><br>
       • Los salvajes <b>saltan de repente</b> al caminar por hierba alta, arena, tierra o cuevas. Los <b>agresivos</b> (nivel en rojo) van directos a por ti; otros pasean o huyen.<br>
@@ -1248,13 +1250,13 @@ export class Panels {
     const av = body.querySelector('#tc-avatar') as HTMLElement | null;
     if (av) av.onclick = () => { this.trainerDir = (this.trainerDir + 1) % 3; audio.play('ui'); this.renderTrainer(body); };
     const lk = body.querySelector('#tc-look') as HTMLElement | null;
-    if (lk) lk.onclick = () => { this.close('trainer'); this.open('settings'); };
     const rk = body.querySelector('#tc-rank') as HTMLElement | null;
-    if (rk) rk.onclick = () => { this.close('trainer'); this.socialTab = 'rank'; this.open('social'); };
     const gh = body.querySelector('#tc-gyms') as HTMLElement | null;
-    if (gh) gh.onclick = () => { this.close('trainer'); this.open('gyms'); };
     const hlp = body.querySelector('#tc-help') as HTMLElement | null;
-    if (hlp) hlp.onclick = () => { this.close('trainer'); this.open('help'); };
+    if (lk) lk.onclick = () => { this.close('trainer'); audio.play('ui'); this.open('settings'); };
+    if (rk) rk.onclick = () => { this.close('trainer'); audio.play('ui'); this.socialTab = 'rank'; this.open('social'); };
+    if (gh) gh.onclick = () => { this.close('trainer'); audio.play('ui'); this.open('gyms'); };
+    if (hlp) hlp.onclick = () => { this.close('trainer'); audio.play('ui'); this.open('help'); };
   }
 }
 

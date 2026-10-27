@@ -5,7 +5,7 @@ import { TYPE_NAMES, TYPE_COLORS } from '../../../shared/types';
 import { monURL } from '../graphics/textures';
 import { monSheet, MON_FRAME } from '../graphics/mon3d';
 import { CHANGELOG, RELEASE } from '../../../shared/changelog';
-import { trainerPortrait, colsFromLook, HAT_COLORS, SHIRT_COLORS, SKIN_COLORS, HAIR_COLORS } from '../graphics/trainerArt';
+import { trainerPortrait, colsFromLook, lookRowsHTML, randomLook } from '../graphics/trainerArt';
 import { audio } from '../systems/audio';
 import { openNotebook, shouldAutoOpenNotebook } from './notebook';
 
@@ -217,13 +217,8 @@ export class Menu {
           <div class="sbars">${stat('PS', sp.base.hp)}${stat('ATQ', sp.base.atk)}${stat('DEF', sp.base.def)}${stat('VEL', sp.base.spd)}</div></div>
         <div class="step-title"><span>PASO 2 · TU ENTRENADOR</span><b><button class="btn tiny gray" id="trot" style="padding:1px 6px;font-size:10px">⟳ Vista</button> <button class="btn tiny gold" id="trand" style="padding:1px 6px;font-size:10px">🎲 Aleatorio</button></b></div>
         <div class="look-card">
-          <canvas id="tprev" class="px" width="48" height="72"></canvas>
-          <div class="looks grow">
-            <span>Gorra</span><div class="swatches" data-f="hat">${HAT_COLORS.map((c, i) => `<div class="sw ${look.hat === i ? 'sel' : ''}" style="background:${c}" data-i="${i}"></div>`).join('')}</div>
-            <span>Ropa</span><div class="swatches" data-f="shirt">${SHIRT_COLORS.map((c, i) => `<div class="sw ${look.shirt === i ? 'sel' : ''}" style="background:${c}" data-i="${i}"></div>`).join('')}</div>
-            <span>Piel</span><div class="swatches" data-f="skin">${SKIN_COLORS.map((c, i) => `<div class="sw ${look.skin === i ? 'sel' : ''}" style="background:${c}" data-i="${i}"></div>`).join('')}</div>
-            <span>Pelo</span><div class="swatches" data-f="hair">${HAIR_COLORS.map((c, i) => `<div class="sw ${look.hair === i ? 'sel' : ''}" style="background:${c}" data-i="${i}"></div>`).join('')}</div>
-          </div>
+          <canvas id="tprev" class="px" width="96" height="144"></canvas>
+          <div class="looks grow">${lookRowsHTML(look)}</div>
         </div>
         <button class="btn green play-btn" id="mgo" style="margin-top:14px">▶ ¡Empezar la aventura con ${esc(sp.name)}!</button>`;
       drawTrainer();
@@ -232,10 +227,7 @@ export class Menu {
       this.box.querySelector<HTMLButtonElement>('#sshiny')!.onclick = () => { sShiny = !sShiny; audio.play(sShiny ? 'sparkle' : 'ui'); render(); };
       this.box.querySelector<HTMLButtonElement>('#trot')!.onclick = () => { tDir = (tDir + 1) % 3; audio.play('ui'); drawTrainer(); };
       this.box.querySelector<HTMLButtonElement>('#trand')!.onclick = () => {
-        look.hat = Math.floor(Math.random() * HAT_COLORS.length);
-        look.shirt = Math.floor(Math.random() * SHIRT_COLORS.length);
-        look.skin = Math.floor(Math.random() * SKIN_COLORS.length);
-        look.hair = Math.floor(Math.random() * HAIR_COLORS.length);
+        Object.assign(look, randomLook());
         audio.play('sparkle');
         render();
       };

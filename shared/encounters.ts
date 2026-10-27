@@ -80,6 +80,8 @@ export function aggroChance(key: string, zoneLvl: number, night: boolean): numbe
   let c = sp.temper === 'aggressive' ? 0.72 : sp.temper === 'skittish' ? 0.04 : 0.18;
   if (night) c += 0.1;
   c += Math.min(0.2, zoneLvl / 200);
+  // primeras rutas tranquilas; cuanto más lejos, más hostiles
+  c *= zoneLvl <= 8 ? 0.22 : zoneLvl <= 15 ? 0.45 : zoneLvl <= 25 ? 0.75 : zoneLvl <= 40 ? 1 : 1.2;
   if (sp.rarity === 'legendary') c = Math.max(c, 0.6);
   if (sp.rarity === 'mythic') c = 0.05;
   return Math.max(0, Math.min(0.95, c));

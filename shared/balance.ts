@@ -30,7 +30,7 @@ export const BAL = {
   AGGRO_ATK: 1.12,          // los salvajes agresivos pegan un poco más fuerte
   DEATH_MONEY_LOSS: 0.08,   // dinero perdido al debilitarse el entrenador
   TRAINER_REGEN: 0.025,     // regeneración del entrenador fuera de combate (PS/s)
-  DROP_CHEST: 0.035,        // probabilidad base de que un salvaje derrotado suelte un cofre
+  DROP_CHEST: 0.014,        // probabilidad base de que un salvaje derrotado suelte un cofre
   // --- 2.8: combates más largos y captura más difícil ---
   WILD_HP: 2.0,             // vida de los salvajes (los combates duran más)
   ALLY_HP: 1.6,             // vida de tu equipo

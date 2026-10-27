@@ -71,22 +71,15 @@ function flowerbed(v: number): PixelArt {
 }
 
 function hedge(v: number): PixelArt {
-  const g = new PixelArt(32, 38);
-  g.ell(16, 35, 15.5, 3.5, '#00000040');
-  const top = 8, bot = 34;
-  for (let y = top; y < bot; y++) for (let x = 0; x < 32; x++) {
-    const h = phash(x >> 1, y >> 1, 40 + v), h2 = phash(x, y, 41 + v);
-    const edge = (y === top && (x < 2 || x > 29)) || (y === bot - 1 && (x < 1 || x > 30));
-    if (edge || (y < top + 2 && h < 0.3)) continue;
-    const face = y < top + 9;
-    let c = face ? '#5ba84a' : '#3d8a35';
-    let k = face ? 0.08 - (y - top) * 0.012 : -0.02 - (y - top - 9) * 0.012;
-    k += (h - 0.5) * 0.26 - x / 32 * 0.08;
-    if (h2 < 0.06) k -= 0.22; else if (h2 > 0.96) k += 0.25;
-    if (y === top + 9) k -= 0.18;
-    g.set(x, y, rgba(shade(c, k)), true);
-  }
-  if (v) for (let i = 0; i < 7; i++) { const fx = 3 + phash(i, v, 42) * 26, fy = top + 2 + phash(i, v, 43) * 18; flower(g, fx, fy, v === 1 ? '#ffffff' : '#f58ab8', '#f8d040', 0.7); }
+  // Seto frondoso: matas solapadas que llegan hasta el borde de la casilla, así varios seguidos forman un muro verde continuo.
+  const g = new PixelArt(32, 40);
+  g.ell(16, 37, 16, 3, '#00000030');
+  leafy(g, 16, 30, 16, 8, '#347a2e', 44 + v);
+  leafy(g, 7, 24, 9, 10, '#3f8a36', 45 + v); leafy(g, 25, 24, 9, 10, '#3d8634', 46 + v);
+  leafy(g, 16, 19, 11, 10, '#4c9a40', 47 + v);
+  leafy(g, 11, 14, 6, 5, '#5aab48', 48 + v); leafy(g, 21, 15, 6, 5, '#56a646', 49 + v);
+  if (v) for (let i = 0; i < 8; i++) { const fx = 4 + phash(i, v, 42) * 24, fy = 12 + phash(i, v, 43) * 18; flower(g, fx, fy, v === 1 ? '#ffffff' : '#f58ab8', '#f8d040', 0.7); }
+  else for (let i = 0; i < 5; i++) ball(g, 5 + phash(i, 9, 42) * 22, 16 + phash(i, 9, 43) * 14, 1.1, 1.1, '#c83040', 0.9);   // bayas
   g.outline('#142212');
   return g;
 }

@@ -1,25 +1,43 @@
 // Entrenador personalizable: modelo articulado 3D rasterizado en 32×48 (3 direcciones x 3 fotogramas).
 import { renderTrainer, TRAINER_W, TRAINER_H } from './trainer3d';
 
-export const HAT_COLORS = ['#e03838', '#3868d8', '#38a848', '#f0c030', '#303038', '#f0f0f0', '#8848c0', '#f08030'];
-export const SHIRT_COLORS = ['#3a78d8', '#e04848', '#48b058', '#f0b030', '#404050', '#f4f4f4', '#9a58d0', '#f07838'];
-export const SKIN_COLORS = ['#f8d0a8', '#e8b080', '#b87848', '#7a4a2a'];
-export const HAIR_COLORS = ['#6a4020', '#282028', '#f0d070', '#c84828', '#283868', '#e8e8f0'];
+export const HAT_COLORS = ['#e03838', '#3868d8', '#38a848', '#f0c030', '#303038', '#f0f0f0', '#8848c0', '#f08030', '#e870b0', '#38b0b8'];
+export const SHIRT_COLORS = ['#3a78d8', '#e04848', '#48b058', '#f0b030', '#404050', '#f4f4f4', '#9a58d0', '#f07838', '#e870b0', '#2fa8a0', '#8a5a38', '#28345c'];
+export const SKIN_COLORS = ['#f8d0a8', '#e8b080', '#b87848', '#7a4a2a', '#fbe2cc', '#5a3420'];
+export const HAIR_COLORS = ['#6a4020', '#282028', '#f0d070', '#c84828', '#283868', '#e8e8f0', '#f08cc0', '#48a058', '#8a58c8', '#e87830'];
+export const PANTS_COLORS = ['#344470', '#2a2a34', '#6a5038', '#4a5a40', '#c8b890', '#7a2a36'];
+export const CAP_NAMES = ['Gorra', 'Gorro de lana', 'Sombrero', 'Sin gorra'];
+export const STYLE_NAMES = ['Corto', 'Melena', 'De punta', 'Coleta', 'Moño'];
+export const ACC_NAMES = ['Nada', 'Gafas de sol', 'Bufanda', 'Auriculares'];
+export type Look = { hat: number; shirt: number; skin: number; hair: number; pants?: number; cap?: number; style?: number; acc?: number };
 export const SHOE_COLORS = ['#d83848', '#3868d8', '#38a848', '#e0a020', '#484858', '#d83848', '#8848c0', '#e06828'];
 export const BAG_COLORS = ['#c87830', '#3a4a68', '#487848', '#b86828', '#303040', '#c84848', '#684088', '#b85828'];
 
-export interface TrainerCols { hat: string | null; shirt: string; skin: string; hair: string; pants: string; shoes: string; bag: string; }
+export interface TrainerCols { hat: string | null; shirt: string; skin: string; hair: string; pants: string; shoes: string; bag: string; cap?: number; style?: number; acc?: number; }
 
-export function colsFromLook(l: { hat: number; shirt: number; skin: number; hair: number }): TrainerCols {
+export function colsFromLook(l: Look): TrainerCols {
+  const cap = (l.cap || 0) % CAP_NAMES.length, noHat = l.hat < 0 || cap === 3;
   return {
-    hat: l.hat < 0 ? null : HAT_COLORS[l.hat % 8],
-    shirt: SHIRT_COLORS[l.shirt % 8],
-    skin: SKIN_COLORS[l.skin % 4],
-    hair: HAIR_COLORS[l.hair % 6],
-    pants: '#344470',
+    hat: noHat ? null : HAT_COLORS[l.hat % HAT_COLORS.length],
+    shirt: SHIRT_COLORS[l.shirt % SHIRT_COLORS.length],
+    skin: SKIN_COLORS[l.skin % SKIN_COLORS.length],
+    hair: HAIR_COLORS[l.hair % HAIR_COLORS.length],
+    pants: PANTS_COLORS[(l.pants || 0) % PANTS_COLORS.length],
     shoes: SHOE_COLORS[(l.hat >= 0 ? l.hat : l.shirt) % 8],
     bag: BAG_COLORS[l.shirt % 8],
+    cap, style: (l.style || 0) % STYLE_NAMES.length, acc: (l.acc || 0) % ACC_NAMES.length,
   };
+}
+export const lookKey = (l: Look) => [l.hat, l.shirt, l.skin, l.hair, l.pants || 0, l.cap || 0, l.style || 0, l.acc || 0].join('-');
+export function randomLook(): Look {
+  const r = (n: number) => Math.floor(Math.random() * n);
+  return { hat: r(HAT_COLORS.length), shirt: r(SHIRT_COLORS.length), skin: r(SKIN_COLORS.length), hair: r(HAIR_COLORS.length), pants: r(PANTS_COLORS.length), cap: r(CAP_NAMES.length), style: r(STYLE_NAMES.length), acc: Math.random() < 0.5 ? 0 : r(ACC_NAMES.length) };
+}
+/** Filas del editor de apariencia (creación del personaje y Vestidor). */
+export function lookRowsHTML(l: Look): string {
+  const col = (f: keyof Look, list: string[]) => `<div class="swatches" data-f="${f}">${list.map((c, i) => `<div class="sw ${(l[f] || 0) === i ? 'sel' : ''}" style="background:${c}" data-i="${i}"></div>`).join('')}</div>`;
+  const txt = (f: keyof Look, list: string[]) => `<div class="swatches" data-f="${f}">${list.map((c, i) => `<div class="sw txt ${(l[f] || 0) === i ? 'sel' : ''}" data-i="${i}">${c}</div>`).join('')}</div>`;
+  return `<span>Gorra</span>${txt('cap', CAP_NAMES)}<span>Color</span>${col('hat', HAT_COLORS)}<span>Peinado</span>${txt('style', STYLE_NAMES)}<span>Pelo</span>${col('hair', HAIR_COLORS)}<span>Piel</span>${col('skin', SKIN_COLORS)}<span>Ropa</span>${col('shirt', SHIRT_COLORS)}<span>Pantalón</span>${col('pants', PANTS_COLORS)}<span>Extra</span>${txt('acc', ACC_NAMES)}`;
 }
 
 export const NPC_LOOKS: TrainerCols[] = [

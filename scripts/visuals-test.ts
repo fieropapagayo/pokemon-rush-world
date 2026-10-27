@@ -10,8 +10,7 @@ function checkFrame(g: PixelArt, label: string) {
   for (let x = 0; x < g.w; x++) assert(!g.get(x, 0) && !g.get(x, g.h - 1), `${label}: vertical clipping at ${x}`);
   for (let y = 0; y < g.h; y++) assert(!g.get(0, y) && !g.get(g.w - 1, y), `${label}: horizontal clipping at ${y}`);
 }
-assert.equal(TRAINER_W * TRAINER_SCALE, 16, 'Preserve trainer width');
-assert.equal(TRAINER_H * TRAINER_SCALE, 24, 'Preserve trainer height');
+assert(TRAINER_H * TRAINER_SCALE >= 26 && TRAINER_H * TRAINER_SCALE <= 28, 'Trainer stands taller than small Pokémon');
 let count = 0;
 const looks = [...NPC_LOOKS, ...Array.from({ length: 8 }, (_, i) => colsFromLook({ hat: i - 1, shirt: i, skin: i % 4, hair: i % 6 }))];
 for (const [i, c] of looks.entries()) {

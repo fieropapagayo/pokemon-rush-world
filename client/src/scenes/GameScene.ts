@@ -9,7 +9,7 @@ import { SKILLS, LINK_MAP } from '../../../shared/progression';
 import { TYPE_COLORS, TYPE_NAMES } from '../../../shared/types';
 import { S, bus } from '../state';
 import { net } from '../networking/net';
-import { buildTextures, getTileSet, ensureTrainerTexture, npcTexture, ensureMonTexture } from '../graphics/textures';
+import { buildTextures, getTileSet, ensureTrainerTexture, npcTexture, ensureMonTexture, monTextureFor, pumpMonTextures } from '../graphics/textures';
 import { monScale, MON_FRAME, MON_WORLD_SIZE } from '../graphics/mon3d';
 import { TRAINER_SCALE } from '../graphics/trainer3d';
 import { objectScale } from '../graphics/nature3d';
@@ -24,7 +24,12 @@ import { weatherAt, seasonAt } from '../../../shared/weather';
 import { npcPos } from '../../../shared/world/npcwalk';
 
 const PX = TILE;
-const INTERP_DELAY = 140;
+/** Rótulos del mundo (nombres, carteles): texto real con Pixelify Sans, a 1 píxel de pantalla por píxel (nítido con cualquier zoom). */
+export function worldLabel(scene: Phaser.Scene, text: string, color = '#eef4f0') {
+  return scene.add.text(0, 0, text, { fontFamily: '"Pixelify Sans", "Press Start 2P", monospace', fontSize: '13px', fontStyle: '600', color, stroke: '#0b1016', strokeThickness: 3, resolution: 1 })
+    .setOrigin(0.5, 1).setScale(1 / Math.max(1, scene.cameras.main.zoom));
+}
+const INTERP_DELAY = 210;   // dos instantáneas de margen: si una llega tarde no hay saltos
 const BALL_TEX = ['ball', 'ballB', 'ballU', 'ballM'];
 const STATUS_TINT = [0, 0xff8040, 0xc060f0, 0xf8e040, 0x9090b0, 0x80e0ff];
 
@@ -76,14 +81,14 @@ class MonView {
 }
 
 class PlayerView {
-  sprite: Phaser.GameObjects.Sprite; shadow: Phaser.GameObjects.Image; name: Phaser.GameObjects.BitmapText; tall: Phaser.GameObjects.Image;
+  sprite: Phaser.GameObjects.Sprite; shadow: Phaser.GameObjects.Image; name: Phaser.GameObjects.Text; tall: Phaser.GameObjects.Image;
   buf: Snap[] = []; x = 0; y = 0; dir = 0; moving = false; hp = 100; inv = 0; lookKey = ''; animT = 0; seenAt = 0;
   bubble: Phaser.GameObjects.Container | null = null;
   constructor(public id: number, scene: GameScene, look: any, name: string) {
     this.shadow = scene.add.image(0, 0, 'shadow').setDepth(-30).setScale(0.55, 0.8);
     this.lookKey = ensureTrainerTexture(scene, look || { hat: 0, shirt: 0, skin: 0, hair: 0 });
     this.sprite = scene.add.sprite(0, 0, this.lookKey, 0).setOrigin(0.5, 0.94).setScale(TRAINER_SCALE);
-    this.name = scene.add.bitmapText(0, 0, 'f3', f3(name)).setOrigin(0.5, 1).setDepth(22000);
+    this.name = worldLabel(scene, name).setDepth(22000);
     this.tall = scene.add.image(0, 0, 'tallfront').setOrigin(0.5, 1).setVisible(false);
   }
   destroy() { this.sprite.destroy(); this.shadow.destroy(); this.name.destroy(); this.tall.destroy(); this.bubble?.destroy(); }
@@ -115,7 +120,7 @@ export class GameScene extends Phaser.Scene {
   night!: Phaser.GameObjects.RenderTexture;
   lightImg!: Phaser.GameObjects.Image;
   selRing!: Phaser.GameObjects.Image;
-  hint!: Phaser.GameObjects.BitmapText;
+  hint!: Phaser.GameObjects.Text;
   weather: Record<string, Phaser.GameObjects.Particles.ParticleEmitter> = {};
   chunkCheckAt = 0;
   zoneId = -1;
@@ -152,7 +157,7 @@ export class GameScene extends Phaser.Scene {
     this.barGfx = this.add.graphics().setDepth(21900);
     this.routeGfx = this.add.graphics().setDepth(-27);
     this.selRing = this.add.image(0, 0, 'selring').setDepth(-28).setTint(0xff4040).setVisible(false);
-    this.hint = this.add.bitmapText(0, 0, 'f3', '').setOrigin(0.5, 1).setDepth(22500).setTint(0xfff070).setVisible(false);
+    this.hint = worldLabel(this, '', '#fff3a0').setDepth(22500).setVisible(false);
 
     const look = S.core?.look || { hat: 0, shirt: 0, skin: 0, hair: 0 };
     this.meView = new PlayerView(S.myId, this, look, S.core?.name || '');
@@ -192,6 +197,13 @@ export class GameScene extends Phaser.Scene {
     this.unsub.push(net.on('pleft', m => { const v = this.players.get(m.id); if (v) { v.destroy(); this.players.delete(m.id); } }));
     this.unsub.push(bus.on('core', () => this.refreshPickups()));
     this.unsub.push(bus.on('evolve_fx', (d: any) => this.evolveFxOnTeam(d)));
+    this.unsub.push(bus.on('player_lvl', () => {
+      const pos = this.viewPos(-S.myId);
+      if (pos) {
+        this.fx.ring(pos.x, pos.y + 8, '#ffe060', 42, 850);
+        this.fx.burst(pos.x, pos.y - 12, '#ffe060', 26, 'star', { speed: { min: 30, max: 110 }, lifespan: 950 });
+      }
+    }));
     this.unsub.push(bus.on('throw', () => this.throwAtFocus()));
     this.unsub.push(bus.on('skill', (n: number) => this.useSkill(n)));
     this.unsub.push(bus.on('settings', () => { this.applyZoom(); this.visuals?.applyPost(); }));
@@ -208,7 +220,8 @@ export class GameScene extends Phaser.Scene {
 
   // Las etiquetas se escalan para que cada píxel de la fuente ocupe píxeles enteros de pantalla (nítidas y pequeñas).
   lblScale = 0.5; nameScale = 0.66; frameDt = 0.016;
-  npcNames = new Map<number, Phaser.GameObjects.BitmapText>();
+  npcNames = new Map<number, Phaser.GameObjects.Text>();
+  txtScale = 0.25;
   applyZoom() {
     const w = this.scale.width, h = this.scale.height;
     let z = Math.max(2, Math.min(5, Math.round(Math.min(w / 460, h / 280))));
@@ -216,7 +229,9 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.setZoom(z);
     this.lblScale = Math.max(1, Math.round(z * 0.5)) / z;
     this.nameScale = Math.max(1, Math.round(z * 0.62)) / z;
-    for (const n of this.npcNames.values()) n.setScale(this.nameScale);
+    this.txtScale = 1 / z;
+    for (const n of this.npcNames.values()) n.setScale(this.txtScale);
+    this.hint?.setScale(this.txtScale);
   }
 
   // ------------------------------------------------------------ chunks
@@ -265,7 +280,7 @@ export class GameScene extends Phaser.Scene {
       for (const npc of this.npcIndex.get(k) || []) {
         const s = this.add.sprite((npc.x + 0.5) * PX, (npc.y + 1) * PX, npcTexture(this, npc.look), 0).setOrigin(0.5, 0.94).setScale(TRAINER_SCALE).setDepth((npc.y + 1) * PX);
         const sh = this.add.image(s.x, s.y - 1, 'shadow').setDepth(-30).setScale(0.55, 0.8);
-        const nm = this.add.bitmapText(s.x, s.y - 26, 'f3', f3(npc.name)).setOrigin(0.5, 1).setScale(this.nameScale).setDepth(22000).setTint(npc.role === 'prof' ? 0xaade9e : 0xd1e1dd);
+        const nm = worldLabel(this, npc.name, npc.role === 'prof' ? '#b8f0a8' : npc.role === 'leader' ? '#ffd88a' : '#dbe8e4').setPosition(s.x, s.y - 26).setDepth(22000);
         this.npcNames.set(npc.id, nm); this.npcShadows.set(npc.id, sh);
         this.npcSprites.set(npc.id, s); objs.push(s, sh, nm);
       }
@@ -416,6 +431,7 @@ export class GameScene extends Phaser.Scene {
     if (!list.length) return;
     const i = list.findIndex(v => v.id === S.me.focus);
     this.setFocus(list[(i + 1) % list.length].id);
+    audio.play('ui', { pitch: 1.25 });
   }
 
   throwAtFocus() {
@@ -511,7 +527,7 @@ export class GameScene extends Phaser.Scene {
       if (!m) continue;
       const key = ensureTrainerTexture(this, m.look);
       if (key !== v.lookKey) { v.lookKey = key; v.sprite.setTexture(key, 0); }
-      v.name.setText(f3(m.n) + ' ' + m.lv);
+      v.name.setText(m.n + '  Nv.' + m.lv);
       v.name.setTint(S.party.id && m.party === S.party.id ? 0x80f0ff : 0xffffff);
     }
   }
@@ -527,7 +543,7 @@ export class GameScene extends Phaser.Scene {
       if (!v) {
         const meta = S.players.get(id);
         v = new PlayerView(id, this, meta?.look, meta?.n || '?');
-        v.name.setText(f3(meta?.n || '?') + ' ' + (meta?.lv || ''));
+        v.name.setText((meta?.n || '?') + (meta?.lv ? '  Nv.' + meta.lv : ''));
         if (S.party.id && meta?.party === S.party.id) v.name.setTint(0x80f0ff);
         v.x = x; v.y = y;
         this.players.set(id, v);
@@ -692,7 +708,7 @@ export class GameScene extends Phaser.Scene {
       case 'd': {
         const [, id, amt, flags] = e;
         const p = this.viewPos(id);
-        if (p) this.fx.damage(p.x, p.y - 6, amt, flags, id < 0);
+        if (p) this.fx.damage(p.x, p.y - 6, amt, flags, id < 0, id > 0 && this.mons.get(id)?.owner === S.myId);
         if (id > 0) {
           const v = this.mons.get(id);
           if (v) {
@@ -1013,12 +1029,16 @@ export class GameScene extends Phaser.Scene {
           if (success) {
             this.fx.burst(ball.x, ball.y - 4, critical ? '#60f0ff' : '#fff070', critical ? 22 : 14, 'star', { speed: { min: 20, max: 75 }, lifespan: 950 });
             if (critical) this.fx.floatText(ball.x, ball.y - 18, '¡CAPTURA CRÍTICA!', 0x60f0ff, 1.15, 'f3', 1100, 20);
+            else if (pid === S.myId) this.fx.floatText(ball.x, ball.y - 18, '¡CAPTURADO!', 0x58f080, 1.1, 'f3', 1050, 18);
             if (pid === S.myId) audio.play('catch');
             this.tweens.add({ targets: ball, alpha: 0, delay: 600, duration: 300, onComplete: () => ball.destroy() });
           } else {
             this.fx.burst(ball.x, ball.y, '#ffffff', 12, 'dot');
             if (v) { v.sprite.setScale(v.base * MON_WORLD_SIZE / MON_FRAME).setAlpha(1); this.fx.ring(ball.x, ball.y, '#ffffff', 20, 300); }
-            if (pid === S.myId) audio.play('escape');
+            if (pid === S.myId) {
+              audio.play('escape');
+              this.fx.floatText(ball.x, ball.y - 16, '¡ESCAPÓ!', 0xff8888, 1, 'f3', 850, 16);
+            }
             ball.destroy();
           }
         });
@@ -1070,6 +1090,7 @@ export class GameScene extends Phaser.Scene {
   terrainAt(x: number, y: number) { const tx = Math.floor(x), ty = Math.floor(y); if (tx < 0 || ty < 0 || tx >= this.world.w || ty >= this.world.h) return 0; return this.world.terrain[ty * this.world.w + tx]; }
 
   update(time: number, delta: number) {
+    pumpMonTextures();
     if (!this.inited) return;
     const dt = Math.min(0.05, delta / 1000);
     this.frameDt = dt;
@@ -1090,6 +1111,7 @@ export class GameScene extends Phaser.Scene {
           const terr = this.terrainAt(m.x, m.y);
           if (terr === T.TALL) {
             this.fx.burst(m.x * PX, m.y * PX - 2, '#6cc048', 3, 'leaf', { speed: { min: 10, max: 30 }, gravityY: 30, lifespan: 500 });
+            audio.play('step', { vol: 0.35, pitch: 1.4 });
           } else if (terr === T.SAND || terr === T.SNOW || this.zoneId === 16) {
             this.fx.burst(m.x * PX, m.y * PX, terr === T.SNOW || this.zoneId === 16 ? '#d0e0f0' : '#d8c490', 2, 'dot', { speed: { min: 4, max: 15 }, lifespan: 220, scale: { start: 0.8, end: 0.1 } });
             this.visuals?.footprint(m.x, m.y, m.dir, terr === T.SNOW || this.zoneId === 16);
@@ -1121,6 +1143,8 @@ export class GameScene extends Phaser.Scene {
       this.drawTrainer(p, p.x, p.y, p.dir, p.moving, time, p.hp);
     }
     // pokémon
+    this.epicGfx ||= this.add.graphics().setDepth(-28);
+    this.epicGfx.clear();
     for (const v of this.mons.values()) this.drawMon(v, rt, time);
     // objetivo
     const fv = this.mons.get(S.me.focus);
@@ -1131,7 +1155,7 @@ export class GameScene extends Phaser.Scene {
     } else this.selRing.setVisible(false);
     // pista de interacción
     const it = this.nearInteractable();
-    if (it) this.hint.setVisible(true).setText('[E] ' + it.label).setPosition(m.x * PX, m.y * PX - 33);
+    if (it) this.hint.setVisible(true).setText('[E] ' + it.label).setScale(this.txtScale).setPosition(m.x * PX, m.y * PX - 33);
     else this.hint.setVisible(false);
     // chunks
     this.updateChunks();
@@ -1176,7 +1200,7 @@ export class GameScene extends Phaser.Scene {
       const npc = this.world.npcs[id - 1];
       if (!npc || npc.id !== id) continue;
       const q = npcPos(this.world, npc, now);
-      const px = Math.round(q.x * PX), py = Math.round((q.y + 0.5) * PX);
+      const px = q.x * PX, py = (q.y + 0.5) * PX;
       s.setPosition(px, py).setDepth(py);
       let dir = q.dir;
       const dx = this.me.x - q.x, dy = this.me.y - q.y;
@@ -1184,7 +1208,7 @@ export class GameScene extends Phaser.Scene {
       const base = dir === 0 ? 0 : dir === 1 ? 3 : 6;
       s.setFrame(base + (q.moving ? [1, 0, 2, 0][Math.floor(time / 140 + id) % 4] : 0)).setFlipX(dir === 3);
       this.npcShadows.get(id)?.setPosition(px, py - 1);
-      this.npcNames.get(id)?.setPosition(px, py - 26);
+      this.npcNames.get(id)?.setPosition(px, py - 29);
     }
   }
 
@@ -1310,7 +1334,7 @@ export class GameScene extends Phaser.Scene {
       const lk = ensureTrainerTexture(this, S.core.look);
       if (v.lookKey !== lk) { v.lookKey = lk; v.sprite.setTexture(lk); }
     }
-    const px = Math.round(x * PX), py = Math.round(y * PX);
+    const px = x * PX, py = y * PX;
     const hop = moving ? -Math.abs(Math.sin(time / 130 + v.id)) * 0.7 : 0;
     const br = moving ? 0 : Math.sin(time / 480 + v.id) * 0.022;
     v.sprite.setPosition(px, py + hop).setScale(TRAINER_SCALE * (1 - br * 0.4), TRAINER_SCALE * (1 + br));
@@ -1322,8 +1346,8 @@ export class GameScene extends Phaser.Scene {
     v.sprite.setFlipX(dir === 3);
     v.sprite.setDepth(py);
     v.sprite.setAlpha(hp <= 0 ? 0.35 : 1);
-    v.name.setScale(this.nameScale).setPosition(px, py - 24).setVisible(S.settings.names);
-    if (v.bubble) v.bubble.setPosition(px, py - 30);
+    v.name.setScale(this.txtScale).setPosition(px, py - 28).setVisible(S.settings.names);
+    if (v.bubble) v.bubble.setPosition(px, py - 34);
     const inTall = this.terrainAt(x, y) === T.TALL;
     v.tall.setVisible(inTall);
     if (inTall) v.tall.setTexture(this.tallKey(time, moving, v.id)).setPosition(px, py + 2).setDepth(py + 0.5);
@@ -1333,6 +1357,30 @@ export class GameScene extends Phaser.Scene {
       v.sprite.setCrop(0, 0, 16, 15).setY(py + 3); v.shadow.setVisible(false);
       if (moving && Math.random() < 0.18) this.fx.ripple(px, py + 2, '#d8f2ff', 9, 420);
     } else if (v.sprite.isCropped) { v.sprite.setCrop(); v.shadow.setVisible(true); }
+  }
+
+  epicGfx!: Phaser.GameObjects.Graphics;
+  /** Legendarios y míticos: círculo rúnico giratorio, columna de luz, energía que sube y un leve flotar. */
+  drawEpic(v: MonView, px: number, py: number, time: number) {
+    const sp = SPECIES[v.key], g = this.epicGfx;
+    const col = v.shiny ? 0xffe070 : hex((TYPE_COLORS as any)[sp.types[0]] || '#ffd860'), col2 = hex((TYPE_COLORS as any)[sp.types[1] || sp.types[0]] || '#ffffff');
+    const R = 12 * v.base, rot = time / 1400, pulse = 0.5 + Math.sin(time / 300 + v.id) * 0.5;
+    g.fillStyle(col, 0.1 + pulse * 0.06); g.fillEllipse(px, py, R * 2.6, R * 1.15);
+    for (const [r, dir, seg, w] of [[R, 1, 16, 1.2], [R * 0.72, -1.6, 10, 1]] as const) {
+      g.lineStyle(w, dir > 0 ? col : col2, 0.75);
+      for (let i = 0; i < seg; i += 2) {
+        const a0 = rot * dir + i / seg * Math.PI * 2, a1 = a0 + Math.PI * 2 / seg * 0.8;
+        g.lineBetween(px + Math.cos(a0) * r, py + Math.sin(a0) * r * 0.42, px + Math.cos(a1) * r, py + Math.sin(a1) * r * 0.42);
+      }
+    }
+    for (let i = 0; i < 6; i++) { const a = -rot * 0.7 + i / 6 * Math.PI * 2; g.fillStyle(0xffffff, 0.55 + pulse * 0.4); g.fillCircle(px + Math.cos(a) * R * 1.12, py + Math.sin(a) * R * 0.47, 0.9); }
+    // columna de luz detrás
+    for (let k = 0; k < 4; k++) { g.fillStyle(col, 0.035 + pulse * 0.02); g.fillRect(px - R * (0.55 - k * 0.12), py - 46 * v.base, R * (1.1 - k * 0.24), 46 * v.base); }
+    if (time > ((v as any).nextEpic || 0) && S.settings.particles !== 'low') {
+      (v as any).nextEpic = time + 90 + Math.random() * 80;
+      const a = Math.random() * Math.PI * 2;
+      this.fx.burst(px + Math.cos(a) * R, py + Math.sin(a) * R * 0.4 - 2, Math.random() < 0.5 ? (TYPE_COLORS as any)[sp.types[0]] || '#ffd860' : '#ffffff', 1, 'spark', { speed: { min: 4, max: 10 }, lifespan: 900, gravityY: -26 });
+    }
   }
 
   drawMon(v: MonView, rt: number, time: number) {
@@ -1345,10 +1393,11 @@ export class GameScene extends Phaser.Scene {
     const sp = Math.hypot(v.x - ox, v.y - oy);
     v.vel = v.vel * 0.8 + sp * 0.2;
     v.moving = v.vel > 0.0035;
-    const px = Math.round(v.x * PX), py = Math.round(v.y * PX);
+    const px = v.x * PX, py = v.y * PX;
     const flying = SPECIES[v.key].habitat === 'air';
     const sleeping = v.status === STATUS.SLEEP || v.status === STATUS.FREEZE;
-    const hop = v.dead || sleeping ? 0 : flying ? -3 + Math.sin(time / 240 + v.id) * 1.2 : v.moving ? -Math.abs(Math.sin(time / 130 + v.id)) * 0.9 : 0;
+    const epic = SPECIES[v.key].rarity === 'legendary' || SPECIES[v.key].rarity === 'mythic';
+    const hop = v.dead || sleeping ? 0 : flying ? -3 + Math.sin(time / 240 + v.id) * 1.2 : epic ? -1.5 + Math.sin(time / 380 + v.id) * 1.4 : v.moving ? -Math.abs(Math.sin(time / 130 + v.id)) * 0.9 : 0;
     // respiración en reposo: un leve estirar y encoger del cuerpo
     if (!v.dead && !(v.flags & 32) && time > v.popUntil) { const br = v.moving || sleeping ? 0 : Math.sin(time / 520 + v.id) * 0.025; const b = v.base * MON_WORLD_SIZE / MON_FRAME; v.sprite.setScale(b * (1 - br * 0.5), b * (1 + br)); }
     v.sprite.setPosition(px + v.lunge.x, py + hop + v.lunge.y);
@@ -1359,7 +1408,7 @@ export class GameScene extends Phaser.Scene {
       v.dirX = v.dirX * 0.75 + (v.x - ox) * 0.25; v.dirY = v.dirY * 0.75 + (v.y - oy) * 0.25;
       v.direction = (Math.round(Math.atan2(v.dirX, v.dirY) / (Math.PI / 4)) + 8) % 8;
     }
-    const texture = ensureMonTexture(this, v.key, v.shiny, v.direction);
+    const texture = monTextureFor(this, v.key, v.shiny, v.direction);
     if (v.sprite.texture.key !== texture) v.sprite.setTexture(texture);
     v.sprite.setFlipX(false);
     v.sprite.setDepth(py);
@@ -1372,6 +1421,7 @@ export class GameScene extends Phaser.Scene {
     v.shadow.setVisible(!hidden && !v.dead);
     v.shadow.setScale(v.base * (flying ? 0.55 : 0.7), v.base * (flying ? 0.55 : 0.8)).setAlpha(flying ? 0.65 : 1);
     v.glow?.setVisible(!hidden && !v.dead);
+    if (epic && !hidden && !v.dead) this.drawEpic(v, px, py, time);
     if (v.shiny && !hidden && !v.dead && time > v.nextSpark) {
       v.nextSpark = time + (S.settings.particles === 'low' ? 2200 : 1200) + v.id % 300;
       this.fx.burst(px, py - 12 * v.base, '#fff060', 1, 'star', { speed: { min: 6, max: 16 }, lifespan: 700, gravityY: -10 });
@@ -1453,12 +1503,12 @@ export class GameScene extends Phaser.Scene {
       g.fillStyle(col, 1); g.fillRect(x, y, hpw, h);
       g.fillStyle(0xffffff, 0.3); g.fillRect(x, y, hpw, h / 2);
       g.fillStyle(0x0a1216, 0.55); for (let q = 1; q < 4; q++) g.fillRect(x + w * q / 4, y, o, h);
-      if (v.id === S.me.focus && S.me.fight) { g.fillStyle(0xff5a4a, 0.9); g.fillTriangle(x + w / 2 - 1.5, y - 3.4, x + w / 2 + 1.5, y - 3.4, x + w / 2, y - 1.8); }
+      if (v.id === S.me.focus) { g.fillStyle(S.me.fight ? 0xff5a4a : 0x60d8ff, 0.9); g.fillTriangle(x + w / 2 - 1.5, y - 3.4, x + w / 2 + 1.5, y - 3.4, x + w / 2, y - 1.8); }
     }
     // nombres de entrenadores sobre una placa translúcida
     const plate = (pv: PlayerView, mine: boolean) => {
       if (!pv.name.visible) return;
-      const o = 1 / this.cameras.main.zoom, nw = pv.name.width * this.nameScale, nh = pv.name.height * this.nameScale;
+      const o = 1 / this.cameras.main.zoom, nw = pv.name.displayWidth - 4 * o, nh = pv.name.displayHeight - 4 * o;
       g.fillStyle(0x0b1418, 0.6); g.fillRoundedRect(pv.name.x - nw / 2 - 2 * o, pv.name.y - nh - o, nw + 4 * o, nh + 2 * o, 1.4);
       if (mine) { g.lineStyle(o, 0xf2d28b, 0.6); g.strokeRoundedRect(pv.name.x - nw / 2 - 2 * o, pv.name.y - nh - o, nw + 4 * o, nh + 2 * o, 1.4); }
     };

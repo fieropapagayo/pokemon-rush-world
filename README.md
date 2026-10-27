@@ -35,6 +35,10 @@ npm start
 
 ---
 
+## Publicar una versión nueva (personas e IAs)
+
+Doble clic en **`publicar.bat`**: comprueba el código, compila, lo sube a GitHub y **Render actualiza el servidor solo** en unos minutos; también publica la web de Cloudflare si cambió. **Cualquier IA que trabaje en el proyecto debe ejecutarlo al terminar cada versión** (detalles en [AGENTS.md](AGENTS.md)).
+
 ## 2. Jugar con amigos
 
 El servidor es **autoritativo**: un ordenador hace de servidor (el tuyo, con `run.bat` abierto) y los demás solo necesitan un navegador. No hace falta que tus amigos instalen nada.

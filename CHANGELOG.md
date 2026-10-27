@@ -1,5 +1,33 @@
 # Changelog
 
+## 2.15.0 · Control de Destinos y Atajos de Campo — 27 de octubre de 2026
+
+- **🧭 Botón para Despejar Destino en el Mapa (`panels.ts`)**: botón directo `✕ Quitar destino` en la barra superior del Mapa del Mundo [M] para cancelar la ruta guiada sin tener que cerrar la ventana.
+- **📖 Actualización de la Guía de Controles (`panels.ts`)**: incorporación del atajo de curación rápida `[Q]` y de los comandos de chat (`/dex`, `/equipo`, `/mochila`, `/mapa`, `/pocion`) en la ventana de Ayuda [H].
+- **🔊 Navegación Sonora Unificada (`panels.ts`)**: acústica interactiva táctil al cambiar de categoría en la Mochila [I] y al pulsar los accesos directos de la Tarjeta de Entrenador [K].
+
+## 2.14.0 · Progreso de Pokédex y Comandos Tácticos — 27 de octubre de 2026
+
+- **📊 Cabecera de Pokédex con Porcentaje de Completado (`panels.ts`)**: etiquetas compactas con diseño sobrio para Vistos, Capturados con porcentaje exacto (`X%`) y Shinies con barra de progreso estilizada.
+- **🎯 Flecha de Fijación Táctica en Placas (`GameScene.ts`)**: flecha cian sobre la placa del Pokémon fijado para inspección/captura, manteniendo la flecha roja reservada para ataque activo (`⚔ Luchar`).
+- **💬 Nuevos Atajos de Chat (`hud.ts`)**: soporte para `/dex`, `/equipo`, `/mochila`, `/mapa` y `/pocion` para abrir paneles y gestionar recursos desde el teclado.
+- **🔔 Retroalimentación Acústica en Expediciones y Gimnasios (`panels.ts`, `gyms.ts`)**: sonidos temáticos al despachar y recoger expediciones de reserva y al interactuar con los gimnasios.
+
+## 2.13.0 · Fidelidad de IVs, Amistad y Sonido Ambiental — 27 de octubre de 2026
+
+- **♥ Ordenación por Amistad en Equipo y Caja (`panels.ts`)**: añadido el filtro `Amistad (♥)` en la barra de control para ordenar tus Pokémon por su valor de felicidad (0 a 255), agilizando las evoluciones por afecto.
+- **📊 Corrección de Escala IV en Fichas (`panels.ts`)**: actualizado el indicador numérico a `/31` en cada una de las 4 estadísticas (PS, Ataque, Defensa y Velocidad) tras la ampliación de la escala competitiva.
+- **🌾 Crujido Suave en Hierba Alta (`GameScene.ts`)**: sutil efecto de pisada acústica al adentrarse en la vegetación junto a las hojas proyectadas.
+- **🔊 Navegación Táctil Auditiva (`panels.ts`)**: sonido de confirmación al alternar pestañas en los paneles de Mejoras [U] y Social [O].
+
+## 2.12.0 · Radar Shiny y Dinámica de Captura — 27 de octubre de 2026
+
+- **🌟 Detección de Shinies en el Minimapa (`hud.ts`)**: los Pokémon Shiny salvajes se marcan en el minimapa como rombos dorados pulsantes con destello blanco central, evitando que pasen desapercibidos en la hierba alta o cuevas.
+- **🎯 Retícula de Fijación en el Minimapa (`hud.ts`)**: el objetivo fijado en el mundo se enmarca en el radar con un recuadro táctico adaptativo (cian para captura/inspección y rojo cuando tu equipo lo está atacando).
+- **✨ Rótulos Flotantes de Captura (`GameScene.ts`)**: textos flotantes visualmente claros y dinámicos (`¡CAPTURADO!` en verde esmeralda y `¡ESCAPÓ!` en carmesí suave) directos sobre la Poké Ball al terminar los balanceos.
+- **🔊 Tactilidad Auditiva para [Tab] (`GameScene.ts`)**: sutil sonido de interfaz al rotar cíclicamente entre objetivos salvajes cercanos.
+- **🎉 Celebración Visual de Nivel de Entrenador (`hud.ts`, `GameScene.ts`)**: anillo de luz y lluvia de estrellas doradas centrada en el personaje al subir de nivel.
+
 ## 2.11.0 · Feedback Táctico y Salud de Equipo — 27 de octubre de 2026
 
 - **🩺 Alerta Visual de Salud Crítica en el HUD (`hud.ts`, `v24.css`)**: las ranuras del equipo en peligro de debilitarse (<25% PS) muestran un pulso luminoso ámbar-rojo suave, advirtiendo al entrenador para usar el atajo rápido de curación `[Q]`.

@@ -6,6 +6,46 @@ import { audio } from '../systems/audio';
 
 const HISTORY: { ver: string; date: string; items: string[] }[] = [
   {
+    ver: '2.15 · Control de Destinos y Atajos de Campo',
+    date: '27 de octubre de 2026',
+    items: [
+      'Botón "✕ Quitar destino" en el Mapa del Mundo [M] para despejar la ruta guiada y el rumbo de la brújula en un solo toque.',
+      'Actualizada la Guía de Controles [H] con el atajo de curación rápida [Q] y los nuevos comandos de chat (/dex, /equipo, /pocion).',
+      'Respuesta sonora consistente al alternar categorías en la Mochila [I] y al navegar desde la Tarjeta de Entrenador [K].',
+    ],
+  },
+  {
+    ver: '2.14 · Progreso de Pokédex y Comandos Tácticos',
+    date: '27 de octubre de 2026',
+    items: [
+      'Cabecera de Pokédex estilizada: insignias compactas con conteo de vistos, capturados con porcentaje exacto y shinies.',
+      'Flecha táctica cian sobre el objetivo fijado pacíficamente, diferenciándolo del modo de combate ofensivo en rojo.',
+      'Nuevos comandos de chat para el teclado: /dex, /equipo, /mochila, /mapa y /pocion.',
+      'Respuesta sonora gratificante al enviar y recoger expediciones [X] y al desafiar gimnasios [G].',
+    ],
+  },
+  {
+    ver: '2.13 · Fidelidad de IVs, Amistad y Sonido Ambiental',
+    date: '27 de octubre de 2026',
+    items: [
+      'Ordenación por Amistad (♥) en Equipo/Caja: localiza de inmediato tus compañeros con mayor felicidad para evoluciones especiales (Crobat, Espeon, Umbreon, Togetic).',
+      'Escala de IVs corregida a /31 en la ficha individual de estadísticas de cada Pokémon.',
+      'Efecto sonoro suave de pisadas en hierba alta que complementa las hojas mecidas por el viento.',
+      'Feedback acústico unificado en el cambio de pestañas de Mejoras [U] y Social [O].',
+    ],
+  },
+  {
+    ver: '2.12 · Radar Shiny y Dinámica de Captura',
+    date: '27 de octubre de 2026',
+    items: [
+      'Radar Shiny en Minimapa: los Pokémon Shiny salvajes se señalan en el minimapa como estrellas/rombos dorados luminosos que parpadean para no pasarlos por alto.',
+      'Retícula de fijación en Minimapa: el objetivo seleccionado cuenta con un recuadro de mira en el radar sincronizado con el modo (cian de inspección / rojo de ataque).',
+      'Textos flotantes de captura sobre la Ball: rótulo dinámico "¡CAPTURADO!" en verde o "¡ESCAPÓ!" en rojo para una lectura de combate instantánea.',
+      'Sonido táctil [Tab]: chasquido sonoro suave de confirmación al alternar entre objetivos cercanos.',
+      'Celebración estelar al subir de nivel de entrenador con anillo expansivo y fuegos artificiales dorados en el mundo.',
+    ],
+  },
+  {
     ver: '2.11 · Feedback Táctico y Salud de Equipo',
     date: '27 de octubre de 2026',
     items: [

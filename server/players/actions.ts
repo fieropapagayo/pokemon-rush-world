@@ -145,7 +145,7 @@ export function checkDaily(g: Game, p: PlayerSession) {
 }
 
 export function sanitizeLook(l: any) {
-  return { hat: int(l?.hat, 0, 7), shirt: int(l?.shirt, 0, 7), skin: int(l?.skin, 0, 3), hair: int(l?.hair, 0, 5) };
+  return { hat: int(l?.hat, 0, 9), shirt: int(l?.shirt, 0, 11), skin: int(l?.skin, 0, 5), hair: int(l?.hair, 0, 9), pants: int(l?.pants, 0, 5), cap: int(l?.cap, 0, 3), style: int(l?.style, 0, 4), acc: int(l?.acc, 0, 3) };
 }
 
 function starter(g: Game, p: PlayerSession, sp: string, look: any) {
@@ -196,6 +196,7 @@ function heal(g: Game, p: PlayerSession) {
 function camp(g: Game, p: PlayerSession) {
   if (p.hp <= 0) return g.notify(p, 'Estás debilitado.', 'bad');
   if (p.duelId) return g.notify(p, 'No puedes acampar durante un duelo.', 'bad');
+  if (g.pickCamp(p)) return;
   const r = g.canCamp(p);
   if (r) return g.notify(p, r, 'info');
   g.makeCamp(p);

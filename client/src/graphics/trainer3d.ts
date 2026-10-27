@@ -3,7 +3,7 @@ import { renderSolids, type SolidPart, type Material } from './solid';
 import { shade } from './pixel';
 import type { TrainerCols } from './trainerArt';
 
-export const TRAINER_W = 32, TRAINER_H = 48, TRAINER_SCALE = 0.5;
+export const TRAINER_W = 32, TRAINER_H = 48, TRAINER_SCALE = 0.56;   // el entrenador destaca sobre los Pokémon pequeños
 
 export function trainerParts(c: TrainerCols, pose = 0): SolidPart[] {
   const p: SolidPart[] = [];
@@ -78,8 +78,22 @@ export function trainerParts(c: TrainerCols, pose = 0): SolidPart[] {
     if (nurse) ball(s * 4.7, 19.2, -1.4, 1.5, 1.65, 1.4, c.hair, 'fur');
   }
   ball(0, 23, -0.2, 4.55, 1.65, 3.7, c.hair, 'fur');
+  // Peinados del vestidor
+  const style = c.style || 0;
+  if (style === 1) { ball(0, 17.2, -2.7, 4.3, 3.9, 1.7, c.hair, 'fur'); for (const s of [-1, 1]) ball(s * 3.9, 17.4, -0.4, 1.05, 3.3, 1.3, c.hair, 'fur', s * 0.08); }
+  else if (style === 2 && !c.hat) for (let i = -2; i <= 2; i++) ball(i * 1.55, 24.6 - Math.abs(i) * 0.35, -0.7, 1.05, 2.3, 1.05, c.hair, 'fur', -i * 0.32, true);
+  else if (style === 3) { ball(0, 21, -4.5, 1.35, 1.35, 1.35, shade(c.hair, -0.1), 'fur'); ball(0, 18.2, -5.3, 1.05, 2.6, 1.05, c.hair, 'fur', 0.25, true); }
+  else if (style === 4) ball(0, c.hat ? 22.6 : 25.6, -3.2, 1.9, 1.7, 1.7, c.hair, 'fur');
   for (let i = -2; i <= 2; i++) ball(i * 1.35, 22.4 - (i % 2 ? 0.4 : 0), 2.6, 1.0, 1.55, 1.25, c.hair, 'fur', -0.3);
-  if (c.hat) {
+  if (c.hat && c.cap === 1) {        // gorro de lana con pompón
+    ball(0, 24.1, -0.2, 4.75, 2.7, 3.95, c.hat, 'cloth');
+    ball(0, 22.5, 0, 4.85, 0.75, 4.0, shade(c.hat, -0.18), 'cloth');
+    ball(0, 27, -0.3, 1.2, 1.2, 1.2, white, 'fur');
+  } else if (c.hat && c.cap === 2) { // sombrero de explorador
+    ball(0, 23.2, 0, 6.6, 0.42, 6.0, c.hat, 'cloth');
+    ball(0, 24.7, -0.2, 4.3, 1.95, 3.6, c.hat, 'cloth');
+    ball(0, 23.85, 0, 4.36, 0.45, 3.66, ink, 'cloth');
+  } else if (c.hat) {
     ball(0, 24.3, -0.1, 4.8, nurse ? 1.25 : 2.15, 3.9, c.hat);
     if (!nurse) {
       ball(0, 23.05, 3.1, 4.8, 0.5, 2.25, shade(c.hat, -0.12));
@@ -99,6 +113,9 @@ export function trainerParts(c: TrainerCols, pose = 0): SolidPart[] {
     ball(s * 1.8, 21.45, 3.2, 0.95, 0.22, 0.35, c.hair, 'fur', -s * 0.08);
   }
   ball(0, 18.75, 3.6, 0.6, 0.65, 0.7, c.skin, 'skin');
+  if (c.acc === 1) { for (const s of [-1, 1]) ball(s * 1.8, 20.25, 4.05, 1.3, 0.85, 0.25, '#1e2130', 'metal'); ball(0, 20.5, 4.1, 0.6, 0.18, 0.15, '#1e2130', 'metal'); }
+  else if (c.acc === 2) { ball(0, 15.1, 0.3, 2.7, 0.95, 2.5, '#d8484a', 'cloth'); ball(1.5, 13.2, 2.3, 0.65, 1.5, 0.35, '#c03a3e', 'cloth', 0.15); }
+  else if (c.acc === 3) { for (const s of [-1, 1]) ball(s * 4.45, 19.8, 0.2, 1.0, 1.35, 1.05, '#2e303c', 'metal'); if (!c.hat) ball(0, 24.6, 0.2, 4.6, 0.5, 0.9, '#2e303c', 'metal'); }
   ball(0, 17.55, 3.45, 0.75, 0.15, 0.15, shade(c.skin, -0.28), 'smooth');
   if (blaine) for (const s of [-1, 1]) ball(s * 0.85, 18, 3.8, 1.1, 0.5, 0.3, white, 'fur', s * 0.15);
   return p;

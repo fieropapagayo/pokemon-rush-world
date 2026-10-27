@@ -158,24 +158,38 @@ export class FX {
     return t;
   }
 
-  damage(x: number, y: number, n: number, flags: number, onPlayer = false) {
+  /** Texto de combate nítido (Pixelify Sans con contorno), tamaño fijo en píxeles de pantalla. */
+  numText(x: number, y: number, text: string, color: string, size: number) {
+    const z = Math.max(1, this.s.cameras.main.zoom);
+    return this.s.add.text(x, y, text, { fontFamily: '"Pixelify Sans", monospace', fontSize: size + 'px', fontStyle: '700', color, stroke: '#140a12', strokeThickness: Math.max(3, Math.round(size / 4.5)), resolution: 1 })
+      .setOrigin(0.5, 1).setDepth(23000).setScale(1 / z);
+  }
+
+  damage(x: number, y: number, n: number, flags: number, onPlayer = false, mine = false) {
     if (!S.settings.dmg) return;
-    let tint = 0xffffff, scale = 1;
-    if (flags & 1) {
-      tint = 0xfff060; scale = 2;
-      this.floatText(x, y - 14, '¡CRÍTICO!', 0xffd700, 1.05, 'f3', 750, 18);
-    } else if (flags & 2) {
-      tint = 0xffa040;
-      this.floatText(x, y - 12, '¡EFICAZ!', 0xff9430, 0.9, 'f3', 700, 16);
-    } else if (flags & 4) {
-      tint = 0xa8a8b8;
-      this.floatText(x, y - 10, 'POCO EFICAZ', 0x90a8c0, 0.75, 'f3', 650, 14);
+    const z = Math.max(1, this.s.cameras.main.zoom), crit = !!(flags & 1);
+    let color = mine ? '#ff9a86' : '#ffffff', size = crit ? 26 : flags & 2 ? 19 : flags & 4 ? 13 : 16;
+    let tag = '', tagColor = '';
+    if (crit) { color = '#ffe24a'; tag = '¡CRÍTICO!'; tagColor = '#ffb020'; }
+    else if (flags & 2) { color = '#ffad4a'; tag = '¡Súper eficaz!'; tagColor = '#ff8a30'; }
+    else if (flags & 4) { color = '#b4bccb'; tag = 'Poco eficaz'; tagColor = '#8ea0b8'; }
+    if (flags & 16) color = '#d494ff';
+    if (flags & 8) color = '#86ecff';
+    if (onPlayer) color = '#ff5a5a';
+    const side = Math.random() < 0.5 ? -1 : 1, x0 = x + side * (2 + Math.random() * 4);
+    const t = this.numText(x0, y, (crit ? '' : '') + n, color, size);
+    const s1 = (crit ? 1.9 : 1.45) / z, s0 = 1 / z;
+    t.setScale(s1);
+    this.s.tweens.add({ targets: t, scale: s0 * (crit ? 1.1 : 1), duration: crit ? 220 : 140, ease: 'Back.Out' });
+    this.s.tweens.add({ targets: t, x: x0 + side * (5 + Math.random() * 7), duration: 820, ease: 'Sine.Out' });
+    this.s.tweens.add({ targets: t, y: y - (crit ? 22 : 15), duration: 820, ease: 'Cubic.Out' });
+    this.s.tweens.add({ targets: t, alpha: 0, delay: 520, duration: 320, onComplete: () => t.destroy() });
+    if (tag) {
+      const l = this.numText(x, y - size / z - 2, tag, tagColor, crit ? 13 : 11);
+      this.s.tweens.add({ targets: l, y: l.y - 12, duration: 760, ease: 'Cubic.Out' });
+      this.s.tweens.add({ targets: l, alpha: 0, delay: 480, duration: 300, onComplete: () => l.destroy() });
+      if (crit) { this.ring(x, y - 4, '#fff1a0', 16, 260); this.burst(x, y - 6, '#ffe060', 6, 'star', { speed: { min: 30, max: 90 }, lifespan: 420 }); }
     }
-    if (flags & 16) tint = 0xc070f0;
-    if (flags & 8) tint = 0x80e8ff;
-    if (onPlayer) tint = 0xff5050;
-    const t = this.floatText(x + (Math.random() - 0.5) * 8, y, String(n), tint, scale, 'f5', 750, 16);
-    if (flags & 1) { t.setScale(2.6); this.s.tweens.add({ targets: t, scale: 2, duration: 150 }); }
   }
 }
 

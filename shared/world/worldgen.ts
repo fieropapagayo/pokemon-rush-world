@@ -553,14 +553,15 @@ export function generateWorld(seed: number): World {
       if (!reach[i] || solid[i] !== 0 || reserved[i] || occ[i]) continue;
       const z = ZONES[zone[i]];
       if (!z || (z.kind !== 'wild' && z.kind !== 'dungeon')) continue;
-      if (pickups.some(p => Math.abs(p.x - x) + Math.abs(p.y - y) < 10)) continue;
-      const tier = z.lvl[0] < 10 ? 0 : z.lvl[0] < 20 ? 1 : z.lvl[0] < 32 ? 2 : 3;
+      // los cofres son escasos y están muy separados: cada uno es un hallazgo (y da mejor botín)
+      if (pickups.some(p => Math.abs(p.x - x) + Math.abs(p.y - y) < (kind === 'chest' ? 24 : 10))) continue;
+      const tier = Math.min(3, (z.lvl[0] < 10 ? 0 : z.lvl[0] < 20 ? 1 : z.lvl[0] < 32 ? 2 : 3) + (kind === 'chest' ? 1 : 0));
       pickups.push({ id: pid++, x, y, kind, tier, zone: z.id });
       if (kind === 'chest') { occ[i] = 1; solid[i] = 1; }
       count--;
     }
   };
-  placePickups(110, 'chest');
+  placePickups(45, 'chest');
   placePickups(170, 'item');
 
   // ---------- 11. Jefes ----------

@@ -16,8 +16,10 @@ type Part = SolidPart;
 const WHITE = '#fff5df', INK = '#182035';
 
 export function monScale(sp: SpeciesDef, flags = 0) {
-  const size = sp.key === 'mew' ? 0.78 : sp.size === 64 ? 1.08 : sp.size === 48 ? 0.96 : 0.84;
-  return size * (flags & 4 ? 1.45 : flags & 64 ? 1.15 : 1);
+  // Pequeños claramente más bajos que el entrenador; grandes y legendarios, imponentes.
+  const size = sp.key === 'mew' ? 0.7 : sp.size === 64 ? 1.14 : sp.size === 48 ? 0.88 : 0.7;
+  const epic = sp.rarity === 'legendary' || sp.rarity === 'mythic' ? (sp.key === 'mew' || sp.key === 'celebi' || sp.key === 'jirachi' ? 1.2 : 1.32) : 1;
+  return size * epic * (flags & 4 ? 1.45 : flags & 64 ? 1.15 : 1);
 }
 
 /** Local coordinates: x across, y up, z forward. Each limb has its own pose. */

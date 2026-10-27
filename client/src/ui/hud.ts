@@ -290,6 +290,11 @@ export class Hud {
     }
     if (cmd === 'ranking' || cmd === 'top') { (this.panels as any).socialTab = 'rank'; this.panels.open('social'); return; }
     if (cmd === 'huir') { net.send({ t: 'flee' }); return; }
+    if (cmd === 'pokedex' || cmd === 'dex') { this.panels.open('dex'); return; }
+    if (cmd === 'equipo' || cmd === 'team') { this.panels.open('team'); return; }
+    if (cmd === 'mochila' || cmd === 'inv') { this.panels.open('inv'); return; }
+    if (cmd === 'mapa' || cmd === 'map') { this.panels.open('map'); return; }
+    if (cmd === 'pocion' || cmd === 'potion') { (this as any)._usePotion?.(); return; }
     this.toast('Comandos: /g /z /p mensaje · /duelo nombre · /intercambio nombre · /ranking · /acampar · /novedades · /huir · /ayuda', 'info');
   }
 
@@ -428,6 +433,9 @@ export class Hud {
     const ballId = S.settings.ball || 'pokeball';
     const key = `${f.id}|${f.hp}|${f.lvl}|${f.flags}|${f.status || 0}|${caught}|${ballId}|${S.me.fight}`;
     box.style.display = 'flex';
+    // siempre debajo del recuadro del jugador, crezca lo que crezca (buffs, DPS...)
+    const tlr = this.els.tl.getBoundingClientRect(), top = Math.round(tlr.bottom + 8) + 'px';
+    if (box.style.top !== top) box.style.top = top;
     if ((box as any)._k === key) return;
     (box as any)._k = key;
     const topLvl = Math.max(1, ...S.team.map(t => t.lvl));
@@ -543,10 +551,21 @@ export class Hud {
     for (const v of sc.mons.values()) {
       if (v.dead || !(v.flags & 2)) continue;
       const [x, y] = toM(v.x, v.y);
-      if (v.flags & 4) { ctx.fillStyle = '#ff3030'; ctx.fillRect(x - 3, y - 3, 6, 6); }
+      if (v.shiny) {
+        const pulse = 1 + Math.sin(performance.now() / 140) * 0.35;
+        ctx.fillStyle = '#ffd700';
+        ctx.fillRect(x - 2.5 * pulse, y - 2.5 * pulse, 5 * pulse, 5 * pulse);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(x - 1, y - 1, 2, 2);
+      } else if (v.flags & 4) { ctx.fillStyle = '#ff3030'; ctx.fillRect(x - 3, y - 3, 6, 6); }
       else if (v.flags & 1) { ctx.fillStyle = '#ffe040'; ctx.fillRect(x - 2, y - 2, 4, 4); }
       else if (v.flags & 16) { ctx.fillStyle = '#c070ff'; ctx.fillRect(x - 1.5, y - 1.5, 3, 3); }
       else { ctx.fillStyle = '#e06060'; ctx.fillRect(x - 1, y - 1, 2, 2); }
+      if (v.id === S.me.focus) {
+        ctx.strokeStyle = S.me.fight ? '#ff4040' : '#60d8ff';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(x - 3.5, y - 3.5, 7, 7);
+      }
     }
     for (const b of S.bosses) { if (!b.alive) continue; const [x, y] = toM(b.x, b.y); if (x < 0 || y < 0 || x > 168 || y > 168) continue; ctx.strokeStyle = '#ff3030'; ctx.strokeRect(x - 4, y - 4, 8, 8); }
     for (const e of S.events.values()) { if (!e.x) continue; const [x, y] = toM(e.x, e.y); ctx.fillStyle = '#ffd040'; ctx.beginPath(); ctx.arc(Math.max(4, Math.min(164, x)), Math.max(4, Math.min(164, y)), 4, 0, 7); ctx.fill(); }
@@ -629,6 +648,7 @@ export class Hud {
 
   levelUp(m: any) {
     audio.play('tlevel');
+    bus.emit('player_lvl');
     const d = el('div', 'levelup');
     d.innerHTML = `<div class="big">¡NIVEL ${m.lvl}!</div><div class="sm">Entrenador más fuerte: +PS${m.unlocks.length ? '<br>' + m.unlocks.map(esc).join('<br>') : ''}</div>`;
     this.root.appendChild(d);

@@ -6,6 +6,7 @@ import { S, monByUid } from '../state';
 import { net } from '../networking/net';
 import { monURL } from '../graphics/textures';
 import { esc } from './dom';
+import { audio } from '../systems/audio';
 import type { Hud } from './hud';
 
 export function renderGyms(body: HTMLElement, hud: Hud) {
@@ -28,6 +29,7 @@ export function renderGyms(body: HTMLElement, hud: Hud) {
     if (!sc || !npc) return;
     if (Math.hypot(sc.me.x - npc.x - 0.5, sc.me.y - npc.y - 0.5) > 3.5) S.waypoint = { x: npc.x + 0.5, y: npc.y + 0.5, name: 'Líder ' + GYMS[id].leader };
     else net.send({ t: 'gym', id });
+    audio.play('ui');
     hud.panels.close('gyms');
   });
 }

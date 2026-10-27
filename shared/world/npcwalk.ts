@@ -13,8 +13,8 @@ function spots(world: World, n: NpcDef): [number, number][] {
   s = [];
   const z0 = world.zone[n.y * world.w + n.x];
   const free = (x: number, y: number) => x >= 0 && y >= 0 && x < world.w && y < world.h && world.solid[y * world.w + x] === 0 && world.zone[y * world.w + x] === z0;
-  for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
-    if (!dx && !dy) continue;
+  for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) {
+    if (!dx && !dy || dx * dx + dy * dy > 10) continue;
     const x = n.x + dx, y = n.y + dy;
     if (!free(x, y)) continue;
     // la línea recta desde su sitio debe estar libre
@@ -39,7 +39,9 @@ export function npcPos(world: World, n: NpcDef, now: number): NpcPos {
   // los tramos pares vuelven a casa y los impares van a un punto cercano
   const at = (k: number): [number, number] => (k % 2 === 0 ? [n.x, n.y] : sp[Math.floor(hash2(n.id, k, 17) * sp.length)]);
   const a = at(seg - 1), b = at(seg);
-  const walk = Math.min(1, f / 0.32), e = walk * walk * (3 - 2 * walk);
+  // paso a velocidad constante (~1,6 casillas/s) con arranque y frenada suaves
+  const dist = Math.hypot(b[0] - a[0], b[1] - a[1]), dur = Math.min(0.6, (dist * 620 + 250) / SEG);
+  const walk = Math.min(1, f / dur), e = walk < 0.15 ? walk * walk / 0.255 : walk > 0.85 ? 1 - (1 - walk) * (1 - walk) / 0.255 : (walk - 0.075) / 0.85;
   const x = a[0] + (b[0] - a[0]) * e + 0.5, y = a[1] + (b[1] - a[1]) * e + 0.5;
   const dx = b[0] - a[0], dy = b[1] - a[1];
   const moving = walk < 1 && (dx !== 0 || dy !== 0);

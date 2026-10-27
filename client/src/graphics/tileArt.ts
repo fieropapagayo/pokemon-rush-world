@@ -26,22 +26,23 @@ function makeTex(fn: PixFn, v: number): HTMLCanvasElement {
 const r = (x: number, y: number, v: number, s: number) => phash(x + v * 31, y + v * 17, s);
 
 function grassFn(base: string, dark: string, light: string, s: number): PixFn {
+  // Césped con volumen: manchas grandes de tono, briznas de 3 píxeles (raíz oscura, cuerpo y punta iluminada),
+  // tréboles oscuros y alguna florecilla suelta.
+  const mid = mix(base, light, 0.5), deep = shade(dark, -0.06), warm = mix(base, '#c8d070', 0.18), cool = mix(base, '#4a9a78', 0.16);
   return (x, y, v) => {
+    const root = (bx: number, by: number) => r(bx & 15, by & 15, v, s + 40) < 0.07;
+    if (root(x, y + 2) && r(x, y + 2, v, s + 41) < 0.6) return light;
+    if (root(x, y + 1)) return mid;
+    if (root(x, y)) return dark;
+    if (root(x - 1, y + 1) && r(x - 1, y + 1, v, s + 42) < 0.35) return mid;   // brizna doble inclinada
     const h = r(x, y, v, s);
-    // Sparse, irregular tufts instead of a repeating four-tile lattice.
-    const cx = (x + v * 5) % 16, cy = (y + v * 3) % 16;
-    if ((cx === 3 || cx === 5) && cy === 7 || cx === 4 && cy === 8) return dark;
-    if (cx === 3 && cy === 6) return light;
-    if (h < 0.035) return dark;
-    if (h > 0.98) return light;
-    // briznas sueltas: tallo oscuro con la punta iluminada
-    const b = r(x, y + 1, v, s + 41);
-    if (b < 0.03) return light;
-    if (r(x, y - 1, v, s + 41) < 0.03) return shade(base, -0.12);
-    const patch = r(x >> 2, y >> 2, v, s + 27);
-    if (patch < 0.3) return shade(base, -0.03);
-    if (patch > 0.85) return shade(base, 0.025);
-    return base;
+    const fl = r(x, y, v, s + 90);
+    if (fl > 0.9965) return fl > 0.9985 ? '#fbf4dc' : '#f6dc6a';
+    if (r(x >> 1, y >> 1, v, s + 60) < 0.025) return deep;                          // trébol
+    const patch = r(x >> 3, y >> 3, v, s + 27), tint = patch < 0.3 ? cool : patch > 0.72 ? warm : base;
+    if (h < 0.07) return shade(tint, -0.05);
+    if (h > 0.965) return shade(tint, 0.06);
+    return tint;
   };
 }
 
