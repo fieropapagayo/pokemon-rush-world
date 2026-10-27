@@ -5,6 +5,7 @@ import { SPECIES, SPECIES_LIST, speciesBaseExp, RARITY_NAMES } from '../../share
 import { pickEncounter, rollShiny, STEP_CHANCE, ENC, ROAMERS, aggroChance, roamerChance } from '../../shared/encounters';
 import { boostedTable, weatherAt, seasonAt } from '../../shared/weather';
 import { DuelManager, DUEL } from './pvp';
+import { WorldLife } from './ai';
 import type { Cloud } from '../cloud';
 import { MOVES, MoveDef, MOVE_INDEX } from '../../shared/moves';
 import { typeEffect, PType, TYPE_NAMES } from '../../shared/types';
@@ -73,6 +74,7 @@ export class Game {
   trades: TradeManager;
   ranking: Ranking;
   duels: DuelManager;
+  life: WorldLife;
   drops = new Map<number, Drop>();
   camps = new Map<number, Camp>(); nextCamp = 1; campCd = new Map<number, number>();
   cloud: Cloud | null = null;
@@ -90,6 +92,7 @@ export class Game {
     this.trades = new TradeManager(this);
     this.ranking = new Ranking(this);
     this.duels = new DuelManager(this);
+    this.life = new WorldLife(this);
   }
 
   start() {
@@ -137,7 +140,7 @@ export class Game {
     for (const p of this.players.values()) this.updatePlayer(p, dt);
     if (this.tickN % 20 === 0) this.spawner();
     for (const m of this.mons.values()) {
-      if (m.owner) this.updateAlly(m, dt); else this.updateWild(m, dt);
+      if (m.owner) this.updateAlly(m, dt); else if (m.ai) this.life.updateMon(m, dt); else this.updateWild(m, dt);
       this.updateStatus(m);
     }
     this.resolveHits();
@@ -147,6 +150,7 @@ export class Game {
     this.gyms.update();
     this.trades.update();
     this.duels.update();
+    this.life.update(dt);
     if (this.tickN % 5 === 0) this.updateDrops();
     if (this.tickN % 10 === 0) this.updateCamps();
     if (this.tickN % Math.round(COLD.EVERY / 50) === 7) this.updateCold();
@@ -269,6 +273,7 @@ export class Game {
     for (const m of this.monsNear(x, y, r)) {
       if (!m.wild || !m.alive || m.capture || m.exhaustedUntil || (m.boss && m.boss.hidden)) continue;
       if (m.privateTo && m.privateTo !== forPlayer) continue;
+      if (m.ai && m.ai.foe?.id !== forPlayer) continue;
       const d = dist(m.x, m.y, x, y);
       if (d < bd) { bd = d; best = m; }
     }
@@ -438,7 +443,7 @@ export class Game {
       return best;
     }
     const valid = (t: MonEntity | null | PlayerSession) => t instanceof MonEntity && t.wild && t.alive && !t.capture && !t.exhaustedUntil && !(t.boss && t.boss.hidden)
-      && !(t.hp <= 1 && this.isProtectedFor(p, t)) && (!t.privateTo || t.privateTo === p.id);
+      && !(t.hp <= 1 && this.isProtectedFor(p, t)) && (!t.privateTo || t.privateTo === p.id) && (!t.ai || t.ai.foe === p);
     const range = this.aggroRange(p);
     // un clic solo selecciona para ver sus datos; se ataca con doble clic o con "Luchar"
     if (p.focus && p.focusFight && valid(p.focus) && dist(p.x, p.y, p.focus.x, p.focus.y) < 14) return p.focus;
@@ -511,7 +516,7 @@ export class Game {
     if (m.status === STATUS.SLEEP || m.status === STATUS.FREEZE) return;
     const slow = m.status === STATUS.PARALYZE ? 0.6 : 1;
     let t = m.target;
-    const validT = (x: Target | null) => x && (x instanceof MonEntity ? x.alive && x.owner && !x.owner.closed : (x.hp > 0 && !x.closed));
+    const validT = (x: Target | null) => x && (x instanceof MonEntity ? x.alive && (x.owner ? !x.owner.closed : !!x.ai) : (x.hp > 0 && !x.closed));
     if (t && (!validT(t) || dist(m.x, m.y, t.x, t.y) > 13 || dist(m.x, m.y, m.homeX, m.homeY) > 18)) {
       m.target = null; t = null; if (!m.eventId) m.state = 'return';
     }
@@ -639,6 +644,14 @@ export class Game {
     const out: Target[] = [];
     for (const m of this.monsNear(x, y, r + 1.5)) {
       if (!m.alive || m.capture || m.exhaustedUntil || (m.boss && m.boss.hidden)) continue;
+      if (src.ai || m.ai) {
+        // IAs: pelean contra salvajes y, en combate, contra el equipo del jugador retado
+        if (src.ai && m.ai) continue;
+        if (src.ai && m.owner && m.owner !== src.ai.foe) continue;
+        if (src.owner && m.ai.foe !== src.owner) continue;
+        if (dist(m.x, m.y, x, y) <= r + 0.3) out.push(m);
+        continue;
+      }
       if (!!src.owner === !!m.owner && !(src.owner && m.owner && this.duels.hostile(src.owner, m.owner))) continue;
       if (src.owner && !m.owner && src.owner.duelId) continue;
       if (src.owner && m.privateTo && m.privateTo !== src.owner.id) continue;
@@ -646,7 +659,7 @@ export class Game {
       const rr = r + (m.boss || m.alpha ? 1.2 : 0.3);
       if (dist(m.x, m.y, x, y) <= rr) out.push(m);
     }
-    if (!src.owner) for (const p of this.playersNear(x, y, r + 0.3)) if (p.hp > 0 && (!src.privateTo || p.id === src.privateTo)) out.push(p);
+    if (!src.owner && !src.ai) for (const p of this.playersNear(x, y, r + 0.3)) if (p.hp > 0 && (!src.privateTo || p.id === src.privateTo)) out.push(p);
     return out;
   }
 
@@ -854,6 +867,9 @@ export class Game {
     this.emit(m.x, m.y, ['f', m.id]);
     if (m.owner) { m.reviveAt = this.now + (m.owner.duelId ? 1e9 : BAL.REVIVE_MS); return; }
     m.removeAt = this.now + 1000;
+    if (m.ai) { this.rewardKill(m, killer); this.life.onMonFaint(m); return; }
+    if (killer?.ai) this.life.onKill(killer, m);
+    if (m.caveId) this.life.onCaveBoss(m);
     if (m.boss) { this.bosses.onDefeated(m); return; }
     this.rewardKill(m, killer);
     this.maybeDrop(m, killer);
@@ -1197,7 +1213,7 @@ export class Game {
       if (p.hp <= 0 || p.duelId) continue;
       const z = this.zoneAt(p.x, p.y);
       const t = this.world.terrain[Math.floor(p.y) * this.world.w + Math.floor(p.x)];
-      const snowy = t === T.SNOW || /hielo|helad|nieve/i.test(z.name);
+      const snowy = t === T.SNOW || z.weather === 'snow' || /hielo|helad|nieve/i.test(z.name);
       if (z.kind !== 'wild' || (!winter && !snowy)) { p.cold = 0; continue; }
       if (p.campAt && now - p.campSeen < 1500) { if (p.cold > 2) this.notify(p, '🔥 Entras en calor junto a la hoguera.', 'good'); p.cold = 0; continue; }
       if (p.team.some(m => m.alive && m.sp.types.includes('fire'))) { p.cold = 0; continue; }   // un Pokémon de fuego da calor
@@ -1274,6 +1290,7 @@ export class Game {
     const m = this.mons.get(monId);
     if (!m || !m.wild || m.capture) return;
     if (m.privateTo) { this.notify(p, '¡No puedes capturar el Pokémon de un líder de gimnasio!', 'bad'); return; }
+    if (m.ai) { this.notify(p, `Ese Pokémon es de IA·${m.ai.name}: no se puede capturar.`, 'bad'); return; }
     if (dist(p.x, p.y, m.x, m.y) > 9.5) { this.notify(p, 'Está demasiado lejos para lanzar la Ball.', 'bad'); return; }
     const exhausted = m.boss && m.exhaustedUntil > now;
     if (m.boss && !exhausted) { this.notify(p, '¡No puedes capturar a un jefe mientras combate! Derrótalo primero.', 'bad'); return; }
@@ -1452,6 +1469,7 @@ export class Game {
         if (m.privateTo) { if (m.privateTo !== p.id) continue; f |= 2048; }
         if (m.wild && (m.aggro || (m.target && m.state === 'chase'))) f |= 4096;
         if (m.roamer) f |= 8192;
+        if (m.ai) { f |= 2048 | 32768; if (m.ai.foe === p) f |= 4096; }
         if (m.owner && m.owner !== p && this.duels.hostile(p, m.owner)) f |= 16384;
         mn.push([m.id, m.spIdx, r2(m.x), r2(m.y), Math.max(0, Math.ceil(m.hp / m.maxHp * 100)), m.lvl, f, m.owner ? m.owner.id : 0, m.status, m.facing < 0 ? 1 : 0]);
       }
@@ -1467,7 +1485,8 @@ export class Game {
       for (const d of this.drops.values()) if (Math.abs(d.x - p.x) < VR && Math.abs(d.y - p.y) < VRY + 2) dr.push([d.id, r2(d.x), r2(d.y), d.tier, d.owner === p.id || now >= d.freeAt ? 1 : 0]);
       const cp: any[] = [];
       for (const c of this.camps.values()) if (Math.abs(c.x - p.x) < VR && Math.abs(c.y - p.y) < VRY + 2) cp.push([c.id, r2(c.x), r2(c.y), c.owner, Math.max(0, c.until - now)]);
-      p.send({ t: 's', ts: now, pl, mn, ev, tm, me, tg, dr, cp });
+      const life = this.life.snapshot(p, VR, VRY);
+      p.send({ t: 's', ts: now, pl, mn, ev, tm, me, tg, dr, cp, ai: life.ai, mc: life.mc, cv: life.cv });
     }
     this.evts.length = 0;
   }

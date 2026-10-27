@@ -1,6 +1,6 @@
 {
   "name": "pokemon-rush-world",
-  "version": "2.15.0",
+  "version": "2.23.0",
   "private": true,
   "type": "module",
   "description": "Pokémon Rush World - RPG incremental multijugador pixel art en navegador (fan game no oficial)",
@@ -24,6 +24,7 @@
     "test:google": "tsx scripts/google-test.ts",
     "test:mechanics": "tsx scripts/mechanics-test.ts",
     "test:nav": "tsx scripts/nav-test.ts",
+    "test:life": "tsx scripts/life-test.ts",
     "test:visuals": "tsx scripts/visuals-test.ts",
     "preview:visuals": "tsx scripts/visuals-preview.ts"
   },

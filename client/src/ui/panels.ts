@@ -237,7 +237,7 @@ export class Panels {
         <div style="flex:1 1 380px;min-width:300px">
           <div class="row" style="justify-content:space-between"><b>Equipo activo (${team.length}/${slots})</b><div class="row" style="gap:6px"><button class="btn tiny gold" id="tbest" title="Equipa automáticamente tus Pokémon disponibles con mayor Poder (PC)">⚡ Equipar mejores</button><span class="muted" style="font-size:11px">Ranuras: 3→6</span></div></div>
           <div class="grid" style="grid-template-columns:repeat(3,1fr);margin:6px 0">
-            ${[0, 1, 2, 3, 4, 5].map(i => { const m = team[i]; if (!m) return `<div class="card" style="height:64px;display:flex;align-items:center;justify-content:center;${i >= slots ? 'opacity:.4' : ''}">${i >= slots ? 'Bloqueada' : '<span class="muted">Vacía</span>'}</div>`; const sp = SPECIES[m.sp]; const cp = monCP(sp, m.lvl, m.iv); const ivTot = m.iv[0] + m.iv[1] + m.iv[2] + m.iv[3]; const star = ivTot === 124 ? '<span style="color:#ff3388" title="100% IVs">✦</span>' : ivTot >= 105 ? '<span class="gold" title="Élite (85%+ IV)">★</span>' : ''; return `<div class="card mon-card ${this.teamSel === m.uid ? 'sel' : ''}" data-uid="${m.uid}"><img src="${monURL(m.sp, m.shiny, 1)}"><div><div>${m.fav ? '⭐ ' : ''}${m.shiny ? '<span class="gold">✦ </span>' : ''}${star ? star + ' ' : ''}${esc(m.nick || sp.name)}</div><div class="muted" style="font-size:12px">Nv.${m.lvl} · <b class="gold">PC ${cp}</b></div><div>${sp.types.map(typeTag).join('')}</div></div></div>`; }).join('')}
+            ${[0, 1, 2, 3, 4, 5].map(i => { const m = team[i]; if (!m) return `<div class="card" style="height:64px;display:flex;align-items:center;justify-content:center;${i >= slots ? 'opacity:.4' : ''}">${i >= slots ? 'Bloqueada' : '<span class="muted">Vacía</span>'}</div>`; const sp = SPECIES[m.sp]; const cp = monCP(sp, m.lvl, m.iv); const ivTot = m.iv[0] + m.iv[1] + m.iv[2] + m.iv[3]; const star = ivTot === 124 ? '<span style="color:#ff3388" title="100% IVs">✦</span>' : ivTot >= 105 ? '<span class="gold" title="Élite (85%+ IV)">★</span>' : ''; return `<div class="card mon-card ${this.teamSel === m.uid ? 'sel' : ''}" data-uid="${m.uid}" style="position:relative">${i === 0 ? '<span class="tag" style="background:#ffd860;color:#2a1a00;font-size:8px;padding:0 3px;position:absolute;top:2px;right:2px;font-weight:bold" title="Líder del equipo y compañero que te acompaña en el mundo">👑 LÍDER</span>' : ''}<img src="${monURL(m.sp, m.shiny, 1)}"><div><div>${m.fav ? '⭐ ' : ''}${m.shiny ? '<span class="gold">✦ </span>' : ''}${star ? star + ' ' : ''}${esc(m.nick || sp.name)}</div><div class="muted" style="font-size:12px">Nv.${m.lvl} · <b class="gold">PC ${cp}</b></div><div>${sp.types.map(typeTag).join('')}</div></div></div>`; }).join('')}
           </div>
           <div class="card" style="margin-bottom:6px"><b style="color:var(--gold)">Pokémon Link activos</b>
             ${links.length ? links.map(l => { const d = LINK_MAP[l.id]; return `<div class="linkrow"><span class="sw" style="background:${d.color}"></span><div><b>${d.name}${l.tier === 2 ? ' II' : ''}</b> <span class="muted">(${l.members.length} miembros)</span><div class="muted" style="font-size:12px">${esc(d.desc)}</div></div></div>`; }).join('') : '<div class="muted" style="font-size:12px;padding:2px 0">Ninguno. Equipa 2+ del mismo tipo, familia o 5 tipos distintos.</div>'}
@@ -245,6 +245,7 @@ export class Panels {
           </div>
           <div class="row" style="margin:4px 0 6px;gap:4px;flex-wrap:wrap;align-items:center">
             <input id="tf" placeholder="🔍 Buscar..." value="${esc(this.teamFilter)}" style="flex:1 1 110px;min-width:80px;padding:3px 6px;background:#10141f;color:#fff;border:1px solid #334455;border-radius:4px;font-size:11px" />
+            ${(this.teamFilter || this.teamTypeFilter !== 'all') ? `<button class="btn tiny gray" id="tfclear" title="Limpiar búsqueda y filtros" style="padding:2px 7px">✕</button>` : ''}
             <select id="tsort" style="background:#10141f;color:#ffd866;border:1px solid #334455;border-radius:4px;padding:2px 4px;font-size:11px">
               <option value="lvl" ${this.teamSort === 'lvl' ? 'selected' : ''}>Nivel</option>
               <option value="cp" ${this.teamSort === 'cp' ? 'selected' : ''}>Poder (PC)</option>
@@ -305,6 +306,8 @@ export class Panels {
     const tf = body.querySelector('#tf') as HTMLInputElement;
     tf.oninput = () => { this.teamFilter = tf.value; clearTimeout((this as any)._tf); (this as any)._tf = setTimeout(() => { this.renderTeam(body); const n = body.querySelector('#tf') as HTMLInputElement; n.focus(); n.setSelectionRange(n.value.length, n.value.length); }, 250); };
     tf.onkeydown = e => e.stopPropagation();
+    const tfc = body.querySelector('#tfclear') as HTMLElement | null;
+    if (tfc) tfc.onclick = () => { this.teamFilter = ''; this.teamTypeFilter = 'all'; audio.play('ui'); this.renderTeam(body); };
     (body.querySelector('#tdup') as HTMLElement).onclick = () => {
       const best: Record<string, MonSave> = {};
       for (const m of S.mons) { if (!best[m.sp] || m.lvl > best[m.sp].lvl || c.team.includes(m.uid)) if (!best[m.sp] || !c.team.includes(best[m.sp].uid)) best[m.sp] = m; }
@@ -358,8 +361,8 @@ export class Panels {
     return `<div class="card">
       <div class="row"><div class="col" style="align-items:center"><img id="team3d" class="px" src="${monURL(m.sp, m.shiny, 3, this.viewDir, this.currentFrame())}" style="width:144px;height:144px;background:#0003;border-radius:6px;transition:transform .2s ease">${this.controls3D()}</div>
         <div class="col" style="gap:3px">
-          <div class="row" style="gap:4px;flex-wrap:wrap"><span style="font-size:19px">${m.shiny ? '<span class="gold">✦ </span>' : ''}${m.nick ? `${esc(m.nick)} <span class="muted" style="font-size:13px">(${esc(sp.name)})</span>` : esc(sp.name)} <span class="muted">#${String(sp.dex).padStart(3, '0')}</span></span></div>
-          <div class="row" style="gap:4px;flex-wrap:wrap"><button class="btn tiny ${m.fav ? 'gold' : 'gray'}" data-act="fav" title="Proteger como Favorito">${m.fav ? '⭐ Favorito' : '☆ Favorito'}</button><button class="btn tiny gray" data-act="nick" title="Poner o cambiar mote">✏ Mote</button><button class="btn tiny" data-act="pet" style="background:#ff5c8a;color:#fff;border-color:#000" title="Acariciar a tu Pokémon">♥ Acariciar</button><button class="btn tiny gray" data-act="cry" title="Escuchar su grito retro">🔊 Grito</button>${m.ot ? `<span class="tag" style="background:#2a3a58;color:#a8d8ff;font-size:10px" title="Intercambiado con ${esc(m.ot)}">EO: ${esc(m.ot)}</span>` : ''}</div>
+          <div class="row" style="align-items:center;justify-content:space-between;width:100%"><span style="font-size:18px">${m.shiny ? '<span class="gold">✦ </span>' : ''}${m.nick ? `${esc(m.nick)} <span class="muted" style="font-size:13px">(${esc(sp.name)})</span>` : esc(sp.name)} <span class="muted">#${String(sp.dex).padStart(3, '0')}</span></span><div class="row" style="gap:2px"><button class="btn tiny gray" data-act="mprev" title="Pokémon anterior en Caja">◀</button><button class="btn tiny gray" data-act="mnext" title="Pokémon siguiente en Caja">▶</button></div></div>
+          <div class="row" style="gap:4px;flex-wrap:wrap"><button class="btn tiny ${m.fav ? 'gold' : 'gray'}" data-act="fav" title="Proteger como Favorito">${m.fav ? '⭐ Favorito' : '☆ Favorito'}</button><button class="btn tiny gray" data-act="nick" title="Poner o cambiar mote">✏ Mote</button><button class="btn tiny" data-act="pet" style="background:#ff5c8a;color:#fff;border-color:#000" title="Acariciar a tu Pokémon">♥ Acariciar</button><button class="btn tiny gray" data-act="cry" title="Escuchar su grito retro">🔊 Grito</button><button class="btn tiny gray" data-act="dexlink" title="Consultar su entrada en la Pokédex [P]">📖 Dex</button>${m.ot ? `<span class="tag" style="background:#2a3a58;color:#a8d8ff;font-size:10px" title="Intercambiado con ${esc(m.ot)}">EO: ${esc(m.ot)}</span>` : ''}</div>
           <div>${sp.types.map(typeTag).join('')} <span class="tag" style="background:${RARITY_COLORS[sp.rarity]};color:#000">${RARITY_NAMES[sp.rarity]}</span></div>
           <div>Nivel <b>${m.lvl}</b> · Amistad ${hearts} <span class="muted" style="font-size:11px">(${m.fr}/255)</span> · <b class="gold">PC ${monCP(sp, m.lvl, m.iv)}</b> ${ivBadge} ${natTag}</div>
           <div class="bar xp" style="width:160px"><i style="width:${Math.min(100, (m.xp - a) / Math.max(1, b - a) * 100)}%"></i></div>
@@ -374,7 +377,7 @@ export class Panels {
       ${evos ? `<div class="hr"></div><div class="muted" style="font-size:12px">Evoluciones</div>${evos}${['kadabra', 'graveler', 'haunter', 'machoke'].includes(m.sp) ? '<div class="muted" style="font-size:11px;color:#a8d8ff">💡 También evoluciona gratis al intercambiarlo con otro entrenador desde Social [O].</div>' : ''}` : ''}
       <div class="hr"></div>
       <div class="row" style="flex-wrap:wrap">
-        ${busy ? '' : inTeam ? `<button class="btn small gray" data-act="unequip">Quitar del equipo</button>` : `<button class="btn small green" data-act="equip">Equipar</button>`}
+        ${busy ? '' : inTeam ? `${c.team[0] === m.uid ? '<span class="tag" style="background:#ffd86022;color:#ffd860;border:1px solid #ffd86066;font-size:11px;padding:3px 6px">👑 Compañero Líder</span>' : '<button class="btn small gold" data-act="lead" title="Colocar como primer Pokémon y compañero que camina junto a ti en el mundo">👑 Hacer Líder</button>'}<button class="btn small gray" data-act="unequip">Quitar del equipo</button>` : `<button class="btn small green" data-act="equip">Equipar</button>`}
         <button class="btn small purple" data-act="feed" title="Sube 1 nivel con caramelos de su familia">Caramelos (${candies}/${cost})</button>
         ${m.lvl < 100 && candies >= cost5 && cost5 > cost ? `<button class="btn small purple" data-act="feed5" title="Subir 5 niveles seguidos (${cost5} caramelos)">+5 Nv (${cost5})</button>` : ''}
         <button class="btn small gold" data-act="rare" ${(c.items.caramelo_raro || 0) > 0 ? '' : 'disabled'}>Caramelo Raro (${c.items.caramelo_raro || 0})</button>
@@ -401,7 +404,7 @@ export class Panels {
       if (a === 'fav' && ms) { ms.fav = !ms.fav; net.send({ t: 'fav', uid }); this.renderTeam(body); return; }
       if (a === 'nick' && ms) {
         const v = prompt(`Nuevo mote para ${SPECIES[ms.sp].name} (máx. 12 caracteres, vacío para borrar):`, ms.nick || '');
-        if (v !== null) { ms.nick = v.trim().slice(0, 12) || undefined; net.send({ t: 'nick', uid, name: v }); this.renderTeam(body); }
+        if (v !== null) { ms.nick = v.trim().slice(0, 12) || undefined; net.send({ t: 'nick', uid, name: v }); audio.play('ui'); this.renderTeam(body); }
         return;
       }
       if (a === 'pet' && ms) {
@@ -411,7 +414,8 @@ export class Panels {
           img.style.transform = 'translateY(-10px) scale(1.08)';
           setTimeout(() => { img.style.transform = ''; }, 240);
         }
-        const sc = this.hud.scene();
+        audio.cry(SPECIES[ms.sp].dex - 1);
+        const sc = (this.hud as any).scene;
         const overworldMon = S.team.find(t => t.uid === ms.uid);
         const mv = sc && overworldMon ? sc.mons.get(overworldMon.eid) : undefined;
         if (sc && mv) sc.petMon(mv);
@@ -419,6 +423,40 @@ export class Panels {
         return;
       }
       if (a === 'cry' && ms) { audio.cry(SPECIES[ms.sp].dex - 1); return; }
+      if (a === 'dexlink' && ms) {
+        this.dexSel = ms.sp;
+        this.dexShiny = ms.shiny;
+        this.close('team');
+        this.open('dex');
+        this.rerender(['dex']);
+        audio.play('ui');
+        return;
+      }
+      if (a === 'mprev') {
+        const list = S.mons;
+        const i = list.findIndex(x => x.uid === uid);
+        if (i >= 0 && list.length > 1) {
+          const prev = list[(i - 1 + list.length) % list.length];
+          this.teamSel = prev.uid; audio.cry(SPECIES[prev.sp].dex - 1); this.renderTeam(body);
+        }
+        return;
+      }
+      if (a === 'mnext') {
+        const list = S.mons;
+        const i = list.findIndex(x => x.uid === uid);
+        if (i >= 0 && list.length > 1) {
+          const next = list[(i + 1) % list.length];
+          this.teamSel = next.uid; audio.cry(SPECIES[next.sp].dex - 1); this.renderTeam(body);
+        }
+        return;
+      }
+      if (a === 'lead') {
+        const nextTeam = [uid, ...c.team.filter(u => u !== uid)];
+        net.send({ t: 'team', uids: nextTeam });
+        audio.play('levelup');
+        this.hud.toast(`👑 ¡${ms ? (ms.nick || SPECIES[ms.sp].name) : 'Pokémon'} camina ahora junto a ti como líder del equipo!`, 'shiny');
+        return;
+      }
       if (a === 'equip') {
         const slots = teamSlotsFor(c.tlvl);
         let team = [...c.team];
@@ -482,7 +520,7 @@ export class Panels {
       const bst = sel.base;
       const ownedMons = S.mons.filter(m => m.sp === sel.key);
       detail = `<div class="card"><div class="row"><div class="col" style="align-items:center"><img id="dex3d" class="px" src="${monURL(sel.key, showShiny, 3, this.viewDir, isS ? this.currentFrame() : 0)}" style="width:144px;height:144px;background:#0003;border-radius:6px;${isS ? '' : 'filter:brightness(0)'}">${isS ? this.controls3D() : ''}</div>
-        <div class="col" style="gap:3px"><div style="font-size:19px">#${String(sel.dex).padStart(3, '0')} ${isS ? esc(sel.name) : '???'}</div>
+        <div class="col" style="gap:3px"><div class="row" style="align-items:center;justify-content:space-between;width:100%"><div style="font-size:18px">#${String(sel.dex).padStart(3, '0')} ${isS ? esc(sel.name) : '???'}</div><div class="row" style="gap:2px"><button class="btn tiny gray" id="dprev" title="Especie anterior">◀</button><button class="btn tiny gray" id="dnext" title="Especie siguiente">▶</button></div></div>
         ${isS ? `<div>${sel.types.map(typeTag).join('')}</div><div class="row" style="gap:4px;flex-wrap:wrap"><span class="tag" style="background:${RARITY_COLORS[sel.rarity]};color:#000">${RARITY_NAMES[sel.rarity]}</span><span class="tag" style="background:#253048;color:#f0e080;font-size:11px">BST ${bst.hp + bst.atk + bst.def + bst.spd}</span><span class="muted" style="font-size:12px">Ratio ${sel.catchRate}</span></div>` : ''}
         <div class="muted" style="font-size:12px">${isC ? `Capturados: ${d.caught[sel.key]}${d.shiny[sel.key] ? ` · Shiny: ${d.shiny[sel.key]}` : ''}` : isS ? 'Visto, aún no capturado' : 'Desconocido'}</div>
         <div class="row" style="gap:4px;flex-wrap:wrap">${isS ? `<button class="btn tiny gray" id="dcry" title="Escuchar su grito retro">🔊 Grito</button>` : ''}${d.shiny[sel.key] ? `<button class="btn tiny gold" id="dshiny">${this.dexShiny ? 'Ver normal' : 'Ver shiny ✦'}</button>` : ''}${ownedMons.length ? `<button class="btn tiny gray" id="dexbox" title="Ver tus ejemplares de ${esc(sel.name)} en Equipo [T]">◓ En Caja (${ownedMons.length})</button>` : ''}</div>
@@ -567,6 +605,22 @@ export class Panels {
       this.renderDex(body);
     });
     const dc = body.querySelector('#dcry') as HTMLElement | null; if (dc && sel) dc.onclick = () => audio.cry(sel.dex - 1);
+    const dp = body.querySelector('#dprev') as HTMLElement | null;
+    if (dp && sel) dp.onclick = () => {
+      const idx = SPECIES_LIST.findIndex(s => s.key === sel.key);
+      const prev = SPECIES_LIST[(idx - 1 + SPECIES_LIST.length) % SPECIES_LIST.length];
+      this.dexSel = prev.key; this.dexShiny = false;
+      audio.cry(prev.dex - 1);
+      this.renderDex(body);
+    };
+    const dn = body.querySelector('#dnext') as HTMLElement | null;
+    if (dn && sel) dn.onclick = () => {
+      const idx = SPECIES_LIST.findIndex(s => s.key === sel.key);
+      const next = SPECIES_LIST[(idx + 1) % SPECIES_LIST.length];
+      this.dexSel = next.key; this.dexShiny = false;
+      audio.cry(next.dex - 1);
+      this.renderDex(body);
+    };
     const sb = body.querySelector('#dshiny') as HTMLElement | null; if (sb) sb.onclick = () => { this.dexShiny = !this.dexShiny; audio.play('sparkle'); this.renderDex(body); };
     const dbx = body.querySelector('#dexbox') as HTMLElement | null;
     if (dbx && sel) dbx.onclick = () => {
@@ -610,6 +664,8 @@ export class Panels {
   renderInv(body: HTMLElement) {
     const c = S.core!;
     const inTown = ZONES[S.zone]?.kind === 'town';
+    const catCount = (cat: string) => ITEM_LIST.filter(i => i.cat === cat).reduce((s, i) => s + (c.items[i.id] || 0), 0);
+    const totalItems = ITEM_LIST.reduce((s, i) => s + (c.items[i.id] || 0), 0);
     const allCats: [string, string][] = [['ball', 'Poké Balls'], ['heal', 'Curación'], ['evo', 'Evolución'], ['special', 'Especiales']];
     const cats = this.invTab === 'all' ? allCats : allCats.filter(([k]) => k === this.invTab);
     const totalEss = TYPES.reduce((s, t) => s + (c.ess[t] || 0), 0);
@@ -620,12 +676,12 @@ export class Panels {
         <button class="btn small ${inTown ? 'gold' : 'gray'}" id="inv-shop" title="Abrir Tienda Pokémon">🛒 Abrir Tienda</button>
       </div>
       <div class="tabsbar" style="margin-bottom:8px">
-        ${[['all', 'Todos'], ...allCats].map(([k, n]) => `<button class="btn small ${this.invTab === k ? 'on' : 'gray'}" data-invtab="${k}">${n}</button>`).join('')}
+        ${[['all', `Todos (${totalItems})`], ...allCats.map(([k, n]) => [k, `${n} (${catCount(k)})`])].map(([k, n]) => `<button class="btn small ${this.invTab === k ? 'on' : 'gray'}" data-invtab="${k}">${n}</button>`).join('')}
       </div>
-      ${cats.map(([cat, name]) => `<div class="muted" style="margin:6px 0 3px;font-size:12px">${name}</div><div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(225px,1fr))">${ITEM_LIST.filter(i => i.cat === cat).map(i => {
+      ${cats.map(([cat, name]) => `<div class="muted" style="margin:6px 0 3px;font-size:12px">${name} <span class="gold">(${catCount(cat)})</span></div><div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(225px,1fr))">${ITEM_LIST.filter(i => i.cat === cat).map(i => {
         const have = c.items[i.id] || 0;
         const unitSell = i.price ? Math.max(1, Math.floor(i.price * 0.5)) : 0;
-        return `<div class="card row" title="${esc(i.desc)}"><img class="px" src="${iconURL(i.id)}" style="width:32px"><div class="grow"><div>${esc(i.name)} <b>x${have}</b></div><div class="muted" style="font-size:11px">${esc(i.desc)}</div></div><div class="col" style="gap:3px">${['pocion', 'superpocion', 'revivir', 'incienso'].includes(i.id) ? `<button class="btn tiny green" data-use="${i.id}" ${have > 0 ? '' : 'disabled'}>Usar</button>` : i.id === 'caramelo_raro' ? `<button class="btn tiny gold" data-rare ${have > 0 ? '' : 'disabled'}>Usar</button>` : i.cat === 'evo' ? `<button class="btn tiny purple" data-evoteam="${i.id}" title="Ver tus Pokémon que pueden evolucionar">▲ Equipo</button>` : ''}${inTown && unitSell > 0 && have > 0 ? `<button class="btn tiny gray" data-sell1="${i.id}" title="Vender 1 en el pueblo por ${unitSell} ₽">💰 +${unitSell} ₽</button>` : ''}</div></div>`;
+        return `<div class="card row" title="${esc(i.desc)}"><img class="px" src="${iconURL(i.id)}" style="width:32px"><div class="grow"><div>${esc(i.name)} <b>x${have}</b></div><div class="muted" style="font-size:11px">${esc(i.desc)}</div></div><div class="col" style="gap:3px">${['pocion', 'superpocion', 'revivir', 'incienso'].includes(i.id) ? `<button class="btn tiny green" data-use="${i.id}" ${have > 0 ? '' : 'disabled'}>Usar</button>` : i.id === 'caramelo_raro' ? `<button class="btn tiny gold" data-rare ${have > 0 ? '' : 'disabled'}>Usar</button>` : i.cat === 'evo' ? `<button class="btn tiny purple" data-evoteam="${i.id}" title="Ver tus Pokémon que pueden evolucionar">▲ Equipo</button>` : ''}${inTown && unitSell > 0 && have > 0 ? `<button class="btn tiny gray" data-sell1="${i.id}" title="Vender 1 en el pueblo por ${unitSell} ₽">💰 +${unitSell} ₽</button>${have >= 5 ? `<button class="btn tiny gray" data-sell5="${i.id}" title="Vender 5 en el pueblo por ${unitSell * 5} ₽">💰 ×5</button>` : ''}` : ''}</div></div>`;
       }).join('')}</div>`).join('')}
       <details class="card" style="margin-top:8px"><summary style="cursor:pointer;font-size:12px"><b class="gold">✨ Esencias por tipo (${fmt(totalEss)} totales)</b> <span class="muted">· Sirven para Afinidades y piedras</span></summary>
         <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(115px,1fr));margin-top:6px">${TYPES.map(t => `<div class="card row" style="padding:3px 6px;font-size:12px"><img class="px" src="${iconURL('ess_' + t)}" style="width:20px">${TYPE_NAMES[t]} <b class="grow" style="text-align:right">${c.ess[t] || 0}</b></div>`).join('')}</div>
@@ -636,6 +692,7 @@ export class Panels {
     body.querySelectorAll<HTMLElement>('[data-invtab]').forEach(b => b.onclick = () => { this.invTab = b.dataset.invtab as any; audio.play('ui'); this.renderInv(body); });
     body.querySelectorAll<HTMLElement>('[data-use]').forEach(b => b.onclick = () => net.send({ t: 'use', item: b.dataset.use }));
     body.querySelectorAll<HTMLElement>('[data-sell1]').forEach(b => b.onclick = () => { net.send({ t: 'sell', item: b.dataset.sell1, qty: 1 }); audio.play('coin'); });
+    body.querySelectorAll<HTMLElement>('[data-sell5]').forEach(b => b.onclick = () => { net.send({ t: 'sell', item: b.dataset.sell5, qty: 5 }); audio.play('coin'); });
     body.querySelectorAll<HTMLElement>('[data-evoteam]').forEach(b => b.onclick = () => { this.teamTypeFilter = 'evo'; this.open('team'); this.rerender(['team']); });
     const shBtn = body.querySelector('#inv-shop') as HTMLElement | null;
     if (shBtn) shBtn.onclick = () => this.open('shop');
@@ -695,8 +752,8 @@ export class Panels {
       <div class="grid boxgrid" style="margin:6px 0">${reserve.map(m => `<div class="card boxcell ${this.expPick.includes(m.uid) ? 'sel' : ''}" data-pk="${m.uid}"><img src="${monURL(m.sp, m.shiny, 1)}">${esc(SPECIES[m.sp].name)}<br><span class="muted">Nv.${m.lvl}</span></div>`).join('') || '<div class="muted">No tienes Pokémon de reserva. ¡Captura más!</div>'}</div>
       <div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn green" id="estart" ${this.expPick.length && c.expeditions.length < slots ? '' : 'disabled'}>Enviar expedición (${this.expPick.length}/3)</button><button class="btn small gold" id="equick" ${reserve.length && c.expeditions.length < slots ? '' : 'disabled'} title="Selecciona los 3 mejores de reserva y envía la expedición actual en 1 clic">🚀 Envío rápido (3 mejores)</button><button class="btn small gray" id="eauto" ${reserve.length && c.expeditions.length < slots ? '' : 'disabled'}>⚡ Elegir 3 mejores</button>${c.expeditions.some((e: any) => now >= e.end) ? `<button class="btn small purple" id="eclaimall">🎉 Recoger listas</button>` : ''}</div>`;
     body.querySelectorAll<HTMLElement>('[data-claim]').forEach(b => b.onclick = () => { net.send({ t: 'exp_claim', slot: parseInt(b.dataset.claim!, 10) }); audio.play('chest'); });
-    body.querySelectorAll<HTMLElement>('[data-et]').forEach(b => b.onclick = () => { this.expType = b.dataset.et!; this.renderExp(body); });
-    body.querySelectorAll<HTMLElement>('[data-pk]').forEach(b => b.onclick = () => { const u = b.dataset.pk!; if (this.expPick.includes(u)) this.expPick = this.expPick.filter(x => x !== u); else if (this.expPick.length < 3) this.expPick.push(u); this.renderExp(body); });
+    body.querySelectorAll<HTMLElement>('[data-et]').forEach(b => b.onclick = () => { this.expType = b.dataset.et!; audio.play('ui'); this.renderExp(body); });
+    body.querySelectorAll<HTMLElement>('[data-pk]').forEach(b => b.onclick = () => { const u = b.dataset.pk!; if (this.expPick.includes(u)) this.expPick = this.expPick.filter(x => x !== u); else if (this.expPick.length < 3) this.expPick.push(u); audio.play('ui'); this.renderExp(body); });
     (body.querySelector('#estart') as HTMLElement).onclick = () => { net.send({ t: 'exp_start', id: this.expType, uids: this.expPick }); this.expPick = []; audio.play('sparkle'); };
     const equick = body.querySelector('#equick') as HTMLElement | null;
     if (equick) equick.onclick = () => { const pick = reserve.slice(0, 3).map(m => m.uid); if (pick.length) { net.send({ t: 'exp_start', id: this.expType, uids: pick }); this.expPick = []; audio.play('sparkle'); } };
@@ -780,7 +837,7 @@ export class Panels {
       return `<div class="row" style="font-size:11px;padding:2px 4px;background:#ffffff06;border-radius:4px;gap:5px"><img class="px" src="${monURL(spKey, false, 1)}" style="width:22px;height:22px"><b class="grow">${esc(b.name)} <span class="muted">Nv.${b.lvl}</span></b><span style="color:${b.alive ? '#68e888' : '#aaa'}">${b.alive ? '● Vivo' : '⏳ ' + time(b.respawn)}</span><button class="btn tiny" data-boss="${idx}" style="padding:1px 5px;font-size:10px" title="Marcar rumbo hacia ${esc(b.name)}">⌖ Ir</button></div>`;
     }).join('');
     body.innerHTML = `<div class="row" style="justify-content:space-between;flex-wrap:wrap;margin-bottom:4px"><p class="map-tip" style="margin:0">Clic en el mapa: marcar destino · Centros registrados: viaje rápido · La brújula indica la dirección.</p><div class="row" style="gap:6px">${clearWpBtn}${lastTown ? `<button class="btn tiny gold" id="mfast" title="Viaje rápido a ${esc(lastTown.name)}">✈ ${esc(lastTown.name)}</button>` : ''}<span class="tag" style="background:#25324c;color:#ffe5a4;font-size:11px">${SEASON_ICONS[seasonAt(net.serverNow())]} Estación: ${SEASON_NAMES[seasonAt(net.serverNow())]} (${time(seasonLeft(net.serverNow()))})</span></div></div>
-      <div class="zone-legend"><span>Dificultad para tu equipo (Nv.${teamLvl}):</span><span><i style="background:#5fd07a"></i>Fácil</span><span><i style="background:#b8e070"></i>Adecuada</span><span><i style="background:#f2d050"></i>Exigente</span><span><i style="background:#f08a40"></i>Peligrosa</span><span><i style="background:#f04848"></i>Mortal</span></div><div class="row" style="align-items:flex-start;gap:12px;flex-wrap:wrap"><div class="worldmap" style="flex:1 1 520px;max-width:620px"></div><div style="flex:1 1 280px" class="col">${bossRows ? `<details class="card" style="margin-bottom:4px"><summary class="row" style="cursor:pointer;font-size:12px"><b class="gold grow">☠ Jefes de Mundo (${S.bosses.filter(b => b.x < 400 && b.alive).length}/${S.bosses.filter(b => b.x < 400).length} vivos)</b></summary><div class="col" style="gap:3px;margin-top:5px">${bossRows}</div></details>` : ''}<b>Progreso regional</b><div class="row" style="margin:2px 0"><input id="mapf" placeholder="🔍 Filtrar por Pokémon, tipo o ruta…" value="${esc(this.mapFilter)}" style="flex:1;padding:4px 7px;background:#10141f;color:#fff;border:1px solid #334;border-radius:3px;font-size:11px" /></div>${zoneRows || '<div class="muted" style="font-size:12px;padding:8px 0">Ninguna zona coincide con tu búsqueda.</div>'}</div></div>`;
+      <div class="zone-legend"><span>Dificultad para tu equipo (Nv.${teamLvl}):</span><span><i style="background:#5fd07a"></i>Fácil</span><span><i style="background:#b8e070"></i>Adecuada</span><span><i style="background:#f2d050"></i>Exigente</span><span><i style="background:#f08a40"></i>Peligrosa</span><span><i style="background:#f04848"></i>Mortal</span></div><div class="row" style="align-items:flex-start;gap:12px;flex-wrap:wrap"><div class="worldmap" style="flex:1 1 520px;max-width:620px"></div><div style="flex:1 1 280px" class="col">${bossRows ? `<details class="card" style="margin-bottom:4px"><summary class="row" style="cursor:pointer;font-size:12px"><b class="gold grow">☠ Jefes de Mundo (${S.bosses.filter(b => b.x < 400 && b.alive).length}/${S.bosses.filter(b => b.x < 400).length} vivos)</b></summary><div class="col" style="gap:3px;margin-top:5px">${bossRows}</div></details>` : ''}<b>Progreso regional</b><div class="row" style="margin:2px 0"><input id="mapf" placeholder="🔍 Filtrar por Pokémon, tipo o ruta…" value="${esc(this.mapFilter)}" style="flex:1;padding:4px 7px;background:#10141f;color:#fff;border:1px solid #334;border-radius:3px;font-size:11px" />${this.mapFilter ? `<button class="btn tiny gray" id="mapfclear" title="Limpiar filtro de mapa" style="padding:2px 7px">✕</button>` : ''}</div>${zoneRows || '<div class="muted" style="font-size:12px;padding:8px 0">Ninguna zona coincide con tu búsqueda.</div>'}</div></div>`;
     const wm = body.querySelector('.worldmap') as HTMLElement;
     wm.appendChild(cv); wm.insertAdjacentHTML('beforeend', marks.join(''));
     cv.onclick = e => {
@@ -801,6 +858,8 @@ export class Panels {
         }, 200);
       };
       mf.onkeydown = e => e.stopPropagation();
+      const mfc = body.querySelector('#mapfclear') as HTMLElement | null;
+      if (mfc) mfc.onclick = () => { this.mapFilter = ''; audio.play('ui'); this.renderMap(body); };
     }
     const mclear = body.querySelector('#mclear-wp') as HTMLElement | null;
     if (mclear) mclear.onclick = () => { S.waypoint = null; S.route = null; audio.play('ui'); this.renderMap(body); };
@@ -940,10 +999,10 @@ export class Panels {
           <div class="muted" style="font-size:12px">Pokédex ${this.inspect.dex} · Jefes ${this.inspect.bosses} · Derrotados ${fmt(this.inspect.kills)}${this.inspect.links.length ? ' · Links: ' + this.inspect.links.map((l: string) => LINK_MAP[l]?.name).join(', ') : ''}</div>` : ''}
       </div></div>`;
     body.querySelectorAll<HTMLElement>('[data-stab]').forEach(b => b.onclick = () => { this.socialTab = b.dataset.stab as any; audio.play('ui'); this.renderSocial(body); });
-    body.querySelectorAll<HTMLElement>('[data-insp]').forEach(b => b.onclick = () => net.send({ t: 'inspect', id: parseInt(b.dataset.insp!, 10) }));
-    body.querySelectorAll<HTMLElement>('[data-inv]').forEach(b => b.onclick = () => net.send({ t: 'invite', id: parseInt(b.dataset.inv!, 10) }));
-    body.querySelectorAll<HTMLElement>('[data-duel]').forEach(b => b.onclick = () => net.send({ t: 'duel_req', id: parseInt(b.dataset.duel!, 10) }));
-    body.querySelectorAll<HTMLElement>('[data-trade]').forEach(b => b.onclick = () => net.send({ t: 'trade_req', id: parseInt(b.dataset.trade!, 10) }));
+    body.querySelectorAll<HTMLElement>('[data-insp]').forEach(b => b.onclick = () => { net.send({ t: 'inspect', id: parseInt(b.dataset.insp!, 10) }); audio.play('ui'); });
+    body.querySelectorAll<HTMLElement>('[data-inv]').forEach(b => b.onclick = () => { net.send({ t: 'invite', id: parseInt(b.dataset.inv!, 10) }); audio.play('ui'); });
+    body.querySelectorAll<HTMLElement>('[data-duel]').forEach(b => b.onclick = () => { net.send({ t: 'duel_req', id: parseInt(b.dataset.duel!, 10) }); audio.play('ui'); });
+    body.querySelectorAll<HTMLElement>('[data-trade]').forEach(b => b.onclick = () => { net.send({ t: 'trade_req', id: parseInt(b.dataset.trade!, 10) }); audio.play('ui'); });
     const pl = body.querySelector('#pleave') as HTMLElement | null; if (pl) pl.onclick = () => net.send({ t: 'leave' });
     const il = body.querySelector('#invlink') as HTMLElement | null;
     if (il) il.onclick = async () => {
@@ -989,6 +1048,7 @@ export class Panels {
     body.querySelectorAll<HTMLElement>('[data-tpk]').forEach(d => d.onclick = () => {
       const u = d.dataset.tpk!;
       const next = me.uids.includes(u) ? me.uids.filter((x: string) => x !== u) : me.uids.length < 6 ? [...me.uids, u] : me.uids;
+      audio.play('ui');
       sendOffer(next, me.money);
     });
     const tm = body.querySelector('#tmoney') as HTMLInputElement;
@@ -1030,7 +1090,7 @@ export class Panels {
         <div class="hr"></div><b>Intercambio de Fragmentos de Jefe</b>
         <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(260px,1fr));margin-top:6px">${Object.entries(TOKEN_SHOP).map(([id, cost]) => `<div class="card row"><img class="px" src="${iconURL(id)}" style="width:32px"><div class="grow">${esc(ITEMS[id].name)}<div class="cost"><img src="${iconURL('token')}">${cost}</div></div><button class="btn tiny gold" data-tok="${id}" ${inTown && c.tokens >= cost ? '' : 'disabled'}>Canjear</button></div>`).join('')}</div>
       `}`;
-    body.querySelectorAll<HTMLElement>('[data-shoptab]').forEach(b => b.onclick = () => { this.shopTab = b.dataset.shoptab as any; this.renderShop(body); });
+    body.querySelectorAll<HTMLElement>('[data-shoptab]').forEach(b => b.onclick = () => { this.shopTab = b.dataset.shoptab as any; audio.play('ui'); this.renderShop(body); });
     body.querySelectorAll<HTMLElement>('[data-buy]').forEach(b => b.onclick = () => net.send({ t: 'buy', item: b.dataset.buy, qty: parseInt(b.dataset.q!, 10) }));
     body.querySelectorAll<HTMLElement>('[data-sell]').forEach(b => b.onclick = () => { net.send({ t: 'sell', item: b.dataset.sell, qty: parseInt(b.dataset.q!, 10) }); audio.play('coin'); });
     body.querySelectorAll<HTMLElement>('[data-tok]').forEach(b => b.onclick = () => net.send({ t: 'buy', item: b.dataset.tok, qty: 1, tokens: true }));
@@ -1057,8 +1117,9 @@ export class Panels {
           </div>
         </div>
       </div>
-      <label>Música <input type="range" min="0" max="1" step="0.05" value="${st.music}" id="smus"></label>
-      <label>Efectos <input type="range" min="0" max="1" step="0.05" value="${st.sfx}" id="ssfx"></label>
+      <label id="lbl-smus">Música (${Math.round(st.music * 100)}%) <input type="range" min="0" max="1" step="0.05" value="${st.music}" id="smus"></label>
+      <label id="lbl-ssfx">Efectos (${Math.round(st.sfx * 100)}%) <input type="range" min="0" max="1" step="0.05" value="${st.sfx}" id="ssfx"></label>
+      <div class="row" style="gap:6px;margin:2px 0 6px"><button class="btn tiny ${st.music === 0 && st.sfx === 0 ? 'gold' : 'gray'}" id="smute">${st.music === 0 && st.sfx === 0 ? '🔊 Restaurar sonido' : '🔇 Silenciar todo'}</button></div>
       <label>Calidad de partículas <select id="spart"><option value="high" ${st.particles === 'high' ? 'selected' : ''}>Alta</option><option value="low" ${st.particles === 'low' ? 'selected' : ''}>Baja (equipos modestos)</option></select></label>
       <label><input type="checkbox" id="snames" ${st.names ? 'checked' : ''}> Mostrar nombres de jugadores</label>
       <label><input type="checkbox" id="sdmg" ${st.dmg ? 'checked' : ''}> Mostrar números de daño</label>
@@ -1069,8 +1130,33 @@ export class Panels {
       <div class="muted" style="font-size:12px">${S.guest ? 'Cuenta de invitado: tu progreso está ligado a este navegador (token guardado). Si borras los datos del navegador perderás el acceso.' : 'Cuenta registrada: puedes entrar desde cualquier dispositivo con tu usuario y contraseña.'}</div>
     </div>`;
     const upd = () => { saveSettings(); audio.applyVolumes(); bus.emit('settings'); };
-    (body.querySelector('#smus') as HTMLInputElement).oninput = e => { st.music = parseFloat((e.target as HTMLInputElement).value); upd(); };
-    (body.querySelector('#ssfx') as HTMLInputElement).oninput = e => { st.sfx = parseFloat((e.target as HTMLInputElement).value); upd(); audio.play('ui'); };
+    (body.querySelector('#smus') as HTMLInputElement).oninput = e => {
+      st.music = parseFloat((e.target as HTMLInputElement).value);
+      const l = body.querySelector('#lbl-smus');
+      if (l && l.firstChild) l.firstChild.textContent = `Música (${Math.round(st.music * 100)}%) `;
+      upd();
+    };
+    (body.querySelector('#ssfx') as HTMLInputElement).oninput = e => {
+      st.sfx = parseFloat((e.target as HTMLInputElement).value);
+      const l = body.querySelector('#lbl-ssfx');
+      if (l && l.firstChild) l.firstChild.textContent = `Efectos (${Math.round(st.sfx * 100)}%) `;
+      upd();
+      audio.play('ui');
+    };
+    const muteBtn = body.querySelector('#smute') as HTMLElement | null;
+    if (muteBtn) muteBtn.onclick = () => {
+      if (st.music > 0 || st.sfx > 0) {
+        (this as any)._preMute = { m: st.music, s: st.sfx };
+        st.music = 0; st.sfx = 0;
+      } else {
+        const pm = (this as any)._preMute;
+        st.music = pm?.m ?? 0.4;
+        st.sfx = pm?.s ?? 0.7;
+      }
+      upd();
+      audio.play('ui');
+      this.renderSettings(body);
+    };
     (body.querySelector('#spart') as HTMLSelectElement).onchange = e => { st.particles = (e.target as HTMLSelectElement).value as any; upd(); };
     (body.querySelector('#snames') as HTMLInputElement).onchange = e => { st.names = (e.target as HTMLInputElement).checked; upd(); };
     (body.querySelector('#sdmg') as HTMLInputElement).onchange = e => { st.dmg = (e.target as HTMLInputElement).checked; upd(); };
@@ -1108,7 +1194,7 @@ export class Panels {
       <kbd>G</kbd> Gimnasios: localiza a los líderes, desafíalos y consigue seis medallas con mejoras permanentes.<br>
       <kbd>C</kbd> o <kbd>clic derecho</kbd> lanzar Ball · <kbd>B</kbd> cambiar Ball · <kbd>Q</kbd> curar equipo (Poción) · <kbd>1-4</kbd> habilidades · <kbd>Espacio</kbd> esquiva<br>
       <kbd>T</kbd> equipo · <kbd>P</kbd> Pokédex · <kbd>I</kbd> mochila · <kbd>U</kbd> mejoras · <kbd>X</kbd> expediciones · <kbd>M</kbd> mapa · <kbd>J</kbd> misiones · <kbd>O</kbd> social · <kbd>N</kbd> novedades · <kbd>Enter</kbd> chat · <kbd>Esc</kbd> cerrar/ajustes<br>
-      <kbd>F</kbd> huir de los salvajes que te persiguen · <kbd>Z</kbd> encender hoguera de campamento (cura a tus aliados) · <kbd>V</kbd> modo del equipo (Pasivo / Neutral / Ataque / Agresivo) · <kbd>K</kbd> Tarjeta de Entrenador · <kbd>/duelo</kbd> · <kbd>/intercambio</kbd> · <kbd>/ranking</kbd> · <kbd>/acampar</kbd> · <kbd>/pocion</kbd> · <kbd>/dex</kbd> · <kbd>/equipo</kbd> · <kbd>/mapa</kbd>
+      <kbd>F</kbd> huir de los salvajes que te persiguen · <kbd>Z</kbd> encender hoguera de campamento (cura a tus aliados) · <kbd>V</kbd> modo del equipo (Pasivo / Neutral / Ataque / Agresivo) · <kbd>K</kbd> Tarjeta de Entrenador · <kbd>/dex</kbd> · <kbd>/equipo</kbd> · <kbd>/mochila</kbd> · <kbd>/mapa</kbd> · <kbd>/pocion</kbd> · <kbd>/revivir</kbd> · <kbd>/mejoras</kbd> · <kbd>/exp</kbd> · <kbd>/tienda</kbd> · <kbd>/misiones</kbd> · <kbd>/acampar</kbd> · <kbd>/duelo</kbd> · <kbd>/intercambio</kbd> · <kbd>/ranking</kbd> · <kbd>/huir</kbd>
       <div class="hr"></div>
       <b class="gold">Cómo se juega</b><br>
       • Los salvajes <b>saltan de repente</b> al caminar por hierba alta, arena, tierra o cuevas. Los <b>agresivos</b> (nivel en rojo) van directos a por ti; otros pasean o huyen.<br>
@@ -1200,7 +1286,7 @@ export class Panels {
         <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;text-align:center">
           ${myTeam.map(m => {
             const ivPct = Math.round((m.iv[0] + m.iv[1] + m.iv[2] + m.iv[3]) / 124 * 100);
-            return `<div style="background:#ffffff0c;border-radius:8px;padding:4px 2px;border:1px solid ${m.shiny ? '#ffd86688' : '#ffffff18'}">
+            return `<div data-tcmon="${m.uid}" style="background:#ffffff0c;border-radius:8px;padding:4px 2px;border:1px solid ${m.shiny ? '#ffd86688' : '#ffffff18'};cursor:pointer" title="Clic para escuchar grito y abrir en Equipo [T]">
               <img class="px" src="${monURL(m.sp, m.shiny, 1, 1, 2)}" style="width:40px;height:40px" alt="" />
               <div style="font-size:10px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${m.fav ? '⭐' : ''}${m.shiny ? '✦' : ''}${esc(m.nick || SPECIES[m.sp].name)}</div>
               <div class="muted" style="font-size:9px">Nv.${m.lvl} · ${ivPct}% IV</div>
@@ -1247,6 +1333,14 @@ export class Panels {
       </div>
     </div>`;
 
+    body.querySelectorAll<HTMLElement>('[data-tcmon]').forEach(d => d.onclick = () => {
+      const uid = d.dataset.tcmon!;
+      const ms = monByUid(uid);
+      if (ms) audio.cry(SPECIES[ms.sp].dex - 1);
+      this.teamSel = uid;
+      this.close('trainer');
+      this.open('team');
+    });
     const av = body.querySelector('#tc-avatar') as HTMLElement | null;
     if (av) av.onclick = () => { this.trainerDir = (this.trainerDir + 1) % 3; audio.play('ui'); this.renderTrainer(body); };
     const lk = body.querySelector('#tc-look') as HTMLElement | null;

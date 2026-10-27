@@ -1,5 +1,62 @@
 # Changelog
 
+## 2.23.0 · Notificaciones de Diario e Interactividad de Entrenador — 27 de octubre de 2026
+
+- **✎ Indicador Dorado en Diario de Campo (`hud.ts`)**: el botón `[R]` del menú inferior adquiere un contorno dorado `#ffd866` cuando hay investigaciones regionales listas para ser reclamadas.
+- **🎉 Fanfarria en Entregas de Campo (`exploration.ts`)**: sonido de misión cumplida al entregar investigaciones en el Diario.
+- **💬 Comando de Chat /diario (`hud.ts`)**: atajo rápido `/diario` o `/research` para consultar el cuaderno de campo.
+- **📇 Tarjeta de Entrenador Interactiva (`panels.ts`)**: al pulsar cualquiera de los 6 Pokémon de tu equipo en la Tarjeta [K], emite su grito chiptune y abre su ficha en Equipo [T].
+- **🧭 Tooltip en Minimapa (`hud.ts`)**: ayuda contextual al pasar el ratón por el minimapa.
+
+## 2.22.0 · Navegación por Teclado y Marcas Temporales en Chat — 27 de octubre de 2026
+
+- **⌨ Navegación por Teclado con Flechas (`hud.ts`)**: pulsa `Flecha Izquierda` o `Flecha Derecha` en el teclado mientras tengas abierta la Pokédex [P] o el Equipo [T] para hojear especímenes rápidamente con sus gritos retro procedurales.
+- **🕒 Marcas de Hora en Chat (`hud.ts`)**: cada mensaje del chat incluye ahora una marca de tiempo sutil `[HH:MM]` para seguir fácilmente la conversación y las llamadas de grupo.
+- **🧹 Comando /limpiar y /clear (`hud.ts`)**: comando directo para limpiar el registro de mensajes en pantalla en cualquier momento.
+- **✏ Respuesta Acústica en Motes (`panels.ts`)**: confirmación sonora inmediata al actualizar o restablecer el mote de un Pokémon.
+
+## 2.21.0 · Avisos de Mejoras y Coherencia Táctil — 27 de octubre de 2026
+
+- **⬆ Insignia Dinámica en Menú de Mejoras (`hud.ts`)**: el botón `[U]` de la barra de menú inferior adopta un borde dorado `#ffd866` en cuanto tus recursos (dinero, cristales o esencias) permiten costear alguna mejora permanente.
+- **🚀 Coherencia Auditiva en Expediciones (`panels.ts`)**: sonido táctil `ui` al elegir tipo de expedición y al añadir o quitar integrantes de reserva.
+- **⇄ Interacción Táctil en Social e Intercambio (`panels.ts`)**: confirmaciones acústicas al retar a duelo, solicitar intercambio, ver equipo e invitar a grupo, así como al componer ofertas de intercambio.
+
+## 2.20.0 · Gestión de Mochila e Inventario Inteligente — 27 de octubre de 2026
+
+- **🎒 Conteo de Existencias en Mochila (`panels.ts`)**: las pestañas y títulos de categoría en la Mochila [I] reflejan dinámicamente las unidades exactas en posesión (`Poké Balls (24)`, etc.) sin ocupar espacio adicional.
+- **⚡ Cierre Rápido de Popups de Botín (`hud.ts`)**: las recompensas y cofres pueden descartarse inmediatamente al pulsar `Escape`, `Enter`, `Espacio` o hacer clic en el fondo.
+- **🔇 Comando /mute y /silencio (`hud.ts`)**: acceso directo desde el chat para apagar y reanudar el audio completo con aviso sonoro y toast.
+- **✕ Botón de Limpieza en Mapa (`panels.ts`)**: añadido el botón `✕` al buscador de rutas del Mapa [M] en consonancia con Pokédex y Caja.
+
+## 2.19.0 · Enlace Bidireccional Dex-Caja y Comandos de Chat — 27 de octubre de 2026
+
+- **📖 Enlace Bidireccional Dex-Caja (`panels.ts`)**: botón directo `📖 Dex` en la ficha de cualquier Pokémon en Caja para saltar a su registro completo en la Pokédex (con su estado shiny preservado), cerrando el círculo con el botón `◓ En Caja` de la Pokédex.
+- **✕ Botón de Limpieza en Caja (`panels.ts`)**: botón compacto `✕` junto a la barra de búsqueda de Equipo/Caja para despejar instantáneamente filtros y búsquedas activas.
+- **💬 Nuevos Comandos de Chat (`hud.ts`, `panels.ts`)**: soporte para `/revivir`, `/mejoras` (`/upg`), `/expediciones` (`/exp`), `/tienda` (`/shop`), `/misiones` (`/quests`), `/gimnasios` (`/gyms`) y `/ajustes` (`/config`).
+- **ℹ Ayuda y Libreta Actualizadas (`panels.ts`, `notebook.ts`, `changelog.ts`)**: documentación de los atajos y registro histórico.
+
+## 2.18.0 · Líder de Equipo y Control Acústico — 27 de octubre de 2026
+
+- **👑 Designación de Líder de Equipo (`panels.ts`)**: botón directo `👑 Hacer Líder` en la ficha de cualquier Pokémon equipado para promoverlo al puesto 1 como compañero principal en el supramundo, acompañado de insignia `👑 LÍDER` en la cuadrícula de equipo.
+- **🔊 Control de Audio con Porcentajes y Silencio Rápido (`panels.ts`)**: deslizadores de volumen con porcentaje en tiempo real y botón compacto `🔇 Silenciar todo` / `🔊 Restaurar sonido` en Ajustes.
+- **⚡ Grito en Encuentro Sorpresa (`hud.ts`, `v24.css`)**: avatar interactivo en la tarjeta de emboscada salvaje para reproducir el grito retro con un toque.
+- **🛒 Audio Táctil en Tienda (`panels.ts`)**: clics sonoros al alternar entre Comprar objetos y Vender objetos.
+
+## 2.17.0 · Interacción Táctil y Ventas Rápidas — 27 de octubre de 2026
+
+- **🔊 Gritos Táctiles en Objetivo y Radar (`hud.ts`, `exploration.ts`)**: pulsa el avatar del Pokémon objetivo seleccionado o cualquier espécimen de la lista del Radar Cercano para escuchar de inmediato su grito procedural retro de 8 bits.
+- **🐾 Clic Derecho en Equipo del HUD (`hud.ts`)**: haz clic derecho sobre cualquier ranura de tus Pokémon activos en la barra inferior para escuchar su grito y recibir una confirmación reconfortante en pantalla sin tener que pausar o abrir ventanas.
+- **💰 Venta en Lote en Mochila (`panels.ts`)**: botón directo `💰 ×5` en la Mochila [I] cuando estés en una ciudad o pueblo, permitiendo liquidar excedentes rápidamente con sonido de monedas.
+- **✦ Resalte Dorado en Tarjeta de Shiny (`hud.ts`, `v24.css`)**: marco con brillo dorado sutil y efecto hover en el avatar de los Pokémon variocolor seleccionados.
+- **🐛 Corrección en Caricias 3D (`panels.ts`)**: subsanada la llamada a la escena al interactuar con el botón `♥ Acariciar` en la ficha 3D.
+
+## 2.16.0 · Exploración Dinámica y Conmutación de Balls — 27 de octubre de 2026
+
+- **◀ Navegación Secuencial en Pokédex y Caja (`panels.ts`)**: botones compactos `◀` y `▶` para recorrer especies en la Pokédex y ejemplares en la Caja con reproducción automática de sus gritos procedurales retro.
+- **🌿 Grito Acústico en Encuentros Salvajes (`GameScene.ts`)**: los Pokémon que saltan de la hierba alta emiten su grito chiptune auténtico además de la animación de sorpresa.
+- **◓ Conmutación Inteligente de Poké Balls (`GameScene.ts`)**: al pulsar `[C]`, si la Ball seleccionada no tiene existencias, el sistema busca y equipa automáticamente otra Ball disponible en la mochila (Super Ball, Ultra Ball, etc.) en lugar de cancelar el intento.
+- **❌ Aviso Sonoro de Agotamiento (`GameScene.ts`)**: sonido `error` y toast informativo si la mochila no contiene ninguna Poké Ball de ningún tipo.
+
 ## 2.15.0 · Control de Destinos y Atajos de Campo — 27 de octubre de 2026
 
 - **🧭 Botón para Despejar Destino en el Mapa (`panels.ts`)**: botón directo `✕ Quitar destino` en la barra superior del Mapa del Mundo [M] para cancelar la ruta guiada sin tener que cerrar la ventana.

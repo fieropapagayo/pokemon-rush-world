@@ -43,6 +43,7 @@ export const S = {
   waypoint: null as Waypoint | null,
   route: null as { x: number; y: number }[] | null,   // ruta guiada hasta S.waypoint (se recalcula sola)
   routeLen: 0,
+  life: { ai: [] as any[], mc: [] as any[], cv: [] as any[] },   // IAs, mercaderes y cuevas cercanos (instantánea)
   gym: null as null | { id: number; end: number; left: number; total: number },
   trade: null as any,
   rank: null as null | Record<string, { n: string; v: number }[]>,

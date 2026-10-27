@@ -1,4 +1,5 @@
 import { S, bus } from '../state';
+import { audio } from '../systems/audio';
 import { net } from '../networking/net';
 import { SPECIES } from '../../../shared/species';
 import { ZONES } from '../../../shared/zones';
@@ -45,7 +46,11 @@ export class ExplorationGuide {
         else hud.toast('Sal de la cueva para localizar un Centro Pokémon.', 'info');
       } else if (action === 'route') markZone(hud, 2);
       else if (action === 'catch') bus.emit('throw');
-      else if (action === 'select') bus.emit('select_target', Number(b.dataset.id));
+      else if (action === 'select') {
+        bus.emit('select_target', Number(b.dataset.id));
+        const k = b.dataset.key;
+        if (k && SPECIES[k]) audio.cry(SPECIES[k].dex - 1);
+      }
       else hud.panels.open(action!);
     };
   }
@@ -65,7 +70,7 @@ export class ExplorationGuide {
     const html = `<div class="field-heading"><span>CUADERNO DE VIAJE</span><div style="display:flex;gap:4px"><button data-guide="research" title="Diario de campo [R]">${complete}/${RESEARCH.length} ↗</button><button data-guide="fold" title="${this.collapsed ? 'Expandir guía' : 'Minimizar guía'}">${this.collapsed ? '▸' : '▾'}</button></div></div>
       ${this.collapsed ? '' : `<h3>${esc(title)}</h3><p>${esc(hint)}</p><button class="guide-primary" data-guide="${action}">${label} <span>→</span></button>
       <div class="field-heading radar-heading"><span>RADAR CERCANO</span><small>${z?.kind === 'town' ? 'ZONA SEGURA' : 'NV. ' + z?.lvl.join('–')}</small></div>
-      <div class="radar-list">${nearby.length ? nearby.map(m => { const d = Math.round(Math.hypot(m.x - sc.me.x, m.y - sc.me.y)); return `<button class="radar-mon ${m.id === S.me.focus ? 'selected' : ''}" data-guide="select" data-id="${m.id}"><img src="${monURL(m.key, m.shiny, 1)}" alt=""><span><b>${m.shiny ? '✦ ' : m.flags & 64 ? '👑 ' : ''}${esc(SPECIES[m.key].name)}</b><small>Nv.${m.lvl} · ${d}m · ${m.flags & 4 ? 'Jefe' : m.flags & 64 ? 'Alfa' : c.dex.caught[m.key] ? 'Registrado' : '¡Nuevo!'}</small></span><span class="radar-dot ${m.shiny ? 'shiny' : ''}"></span></button>`; }).join('') : '<p class="radar-empty">' + (z?.kind === 'town' ? 'Sal a una ruta para encontrar Pokémon.' : 'Sigue explorando. Los encuentros aparecen cerca de ti.') + '</p>'}</div>
+      <div class="radar-list">${nearby.length ? nearby.map(m => { const d = Math.round(Math.hypot(m.x - sc.me.x, m.y - sc.me.y)); return `<button class="radar-mon ${m.id === S.me.focus ? 'selected' : ''}" data-guide="select" data-id="${m.id}" data-key="${m.key}"><img src="${monURL(m.key, m.shiny, 1)}" alt=""><span><b>${m.shiny ? '✦ ' : m.flags & 64 ? '👑 ' : ''}${esc(SPECIES[m.key].name)}</b><small>Nv.${m.lvl} · ${d}m · ${m.flags & 4 ? 'Jefe' : m.flags & 64 ? 'Alfa' : c.dex.caught[m.key] ? 'Registrado' : '¡Nuevo!'}</small></span><span class="radar-dot ${m.shiny ? 'shiny' : ''}"></span></button>`; }).join('') : '<p class="radar-empty">' + (z?.kind === 'town' ? 'Sal a una ruta para encontrar Pokémon.' : 'Sigue explorando. Los encuentros aparecen cerca de ti.') + '</p>'}</div>
       <button class="guide-help" data-guide="help">WASD o clic para moverte · Ayuda [H]</button>`}`;
     if (html !== this.last) { this.last = html; this.root.innerHTML = html; }
     const it = sc.nearInteractable();
@@ -94,7 +99,7 @@ export function renderResearch(body: HTMLElement) {
     const rewards = [t.reward.money ? `${t.reward.money} ₽` : '', t.reward.crystals ? `${t.reward.crystals} cristales` : '', t.reward.txp ? `${t.reward.txp} EXP` : '', ...Object.entries(t.reward.items || {}).map(([id, qty]) => `${ITEMS[id].name} ×${qty}`)].filter(Boolean);
     return `<article class="research-card ${claimed ? 'claimed' : done ? 'ready' : ''}"><div class="field-heading"><span>ESTUDIO ${String(i + 1).padStart(2, '0')}</span><span>${claimed ? '✓ ENTREGADO' : done ? 'LISTO' : `${n}/${t.goal}`}</span></div><h3>${t.name}</h3><p>${t.desc}</p><div class="bar xp"><i style="width:${n / t.goal * 100}%"></i></div><div class="research-reward">${rewards.join(' · ')}</div><button class="btn small ${done ? 'gold' : 'gray'}" data-research="${t.id}" ${!done || claimed ? 'disabled' : ''}>${claimed ? 'Recompensa recibida' : done ? 'Entregar investigación' : 'En progreso'}</button></article>`;
   }).join('')}</div>`;
-  body.querySelectorAll<HTMLButtonElement>('[data-research]').forEach(b => b.onclick = () => { b.disabled = true; net.send({ t: 'research', id: b.dataset.research }); });
+  body.querySelectorAll<HTMLButtonElement>('[data-research]').forEach(b => b.onclick = () => { b.disabled = true; net.send({ t: 'research', id: b.dataset.research }); audio.play('quest'); });
   const rca = body.querySelector('#rclaimall') as HTMLButtonElement | null;
-  if (rca) rca.onclick = () => { rca.disabled = true; readyList.forEach(t => net.send({ t: 'research', id: t.id })); };
+  if (rca) rca.onclick = () => { rca.disabled = true; readyList.forEach(t => net.send({ t: 'research', id: t.id })); audio.play('quest'); };
 }

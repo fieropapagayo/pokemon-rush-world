@@ -42,6 +42,8 @@ export function handle(g: Game, p: PlayerSession, msg: any) {
     case 'pickup': g.openPickup(p, int(msg.id, 0, 1e6)); return;
     case 'heal': return heal(g, p);
     case 'camp': return camp(g, p);
+    case 'mbuy': return g.life.buy(p, int(msg.id, 0, 1e9), str(msg.item, 30));
+    case 'cavein': return g.life.enterCave(p, int(msg.id, 0, 1e9));
     case 'travel': return travel(g, p, int(msg.town, 0, 100));
     case 'portal': return portal(g, p, int(msg.id, 0, 100));
     case 'starter': return starter(g, p, str(msg.sp, 20), msg.look);
@@ -553,6 +555,9 @@ function devCommand(g: Game, p: PlayerSession, a: string[]) {
     case 'boss': { const b = g.world.bosses.find(x => x.key === a[1]); if (b) g.teleport(p, b.x + 0.5, b.y + 6.5); break; }
     case 'event': g.wevents.start(a[1] || 'rare'); break;
     case 'ambush': p.lastEncAt = 0; g.ambush(p, g.zoneAt(p.x, p.y).id); break;
+    case 'ai': { g.life.spawnTrainer(); const t = g.life.trainers[g.life.trainers.length - 1]; if (t) { t.x = p.x + 3; t.y = p.y; t.mood = (['amistosa', 'rival', 'cobarde'].includes(a[1]) ? a[1] : 'rival') as any; if (a[2]) t.lvl = Number(a[2]); for (const r of t.roster) { r.lvl = t.lvl; r.ent && g.removeMon(r.ent); r.ent = null; r.reviveAt = 0; } t.met.clear(); t.route = []; } break; }
+    case 'merchant': g.life.spawnMerchant(); break;
+    case 'cave': g.life.spawnCave(); break;
     case 'legend': p.lastEncAt = 0; g.ambush(p, g.zoneAt(p.x, p.y).id, ROAMERS.some(r => r.key === a[1]) ? a[1] : 'zapdos'); break;
     case 'heal': g.healTeam(p, 1, true); p.hp = p.maxHp; break;
     default: g.notify(p, 'dev: money|item id n|xp n|lvl n|mon key lvl [shiny]|tp x y|boss key|event kind|heal'); return;

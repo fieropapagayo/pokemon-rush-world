@@ -7,7 +7,8 @@ import { MOVE_LIST } from '../../../shared/moves';
 import { ZONES } from '../../../shared/zones';
 import { SKILLS, LINK_MAP } from '../../../shared/progression';
 import { TYPE_COLORS, TYPE_NAMES } from '../../../shared/types';
-import { S, bus } from '../state';
+import { S, bus, saveSettings } from '../state';
+import { BALLS, ITEMS } from '../../../shared/items';
 import { net } from '../networking/net';
 import { buildTextures, getTileSet, ensureTrainerTexture, npcTexture, ensureMonTexture, monTextureFor, pumpMonTextures } from '../graphics/textures';
 import { monScale, MON_FRAME, MON_WORLD_SIZE } from '../graphics/mon3d';
@@ -438,6 +439,7 @@ export class GameScene extends Phaser.Scene {
     audio.init();
     let id = S.me.focus;
     const v = this.mons.get(id);
+    if (v && v.flags & 32768) { bus.emit('toast', { text: 'Es el Pokémon de un entrenador IA: no se puede capturar.', kind: 'info' }); return; }
     if (v?.flags & 2048) { bus.emit('toast', { text: 'Es el Pokémon de un líder: véncelo para ganar su medalla.', kind: 'info' }); return; }
     if (v?.flags & 16384 || S.duel) { bus.emit('toast', { text: 'No se pueden capturar Pokémon en un duelo.', kind: 'info' }); return; }
     if (!v || !(v.flags & 2)) {
@@ -445,6 +447,22 @@ export class GameScene extends Phaser.Scene {
       const near = [...this.mons.values()].filter(m => m.flags & 2 && !(m.flags & (2048 | 32 | 256)) && !(m.flags & 8 && !(m.flags & 128))).sort((a, b) => Math.hypot(a.x - this.me.x, a.y - this.me.y) - Math.hypot(b.x - this.me.x, b.y - this.me.y))[0];
       if (!near) { bus.emit('toast', { text: 'Selecciona un Pokémon salvaje (clic o Tab) para lanzar la Ball.', kind: 'info' }); return; }
       id = near.id; this.setFocus(id);
+    }
+    const c = S.core;
+    if (c) {
+      const b = S.settings.ball;
+      if ((c.items[b] || 0) <= 0) {
+        const alt = BALLS.find(x => (c.items[x] || 0) > 0);
+        if (alt) {
+          S.settings.ball = alt;
+          saveSettings();
+          bus.emit('toast', { text: `Cambio automático a ${ITEMS[alt].name} (sin ${ITEMS[b].name}).`, kind: 'info' });
+        } else {
+          bus.emit('toast', { text: '¡No te quedan Poké Balls en la mochila! Cómpralas en la Tienda.', kind: 'bad' });
+          audio.play('error');
+          return;
+        }
+      }
     }
     net.send({ t: 'throw', id, ball: S.settings.ball });
   }
@@ -497,6 +515,8 @@ export class GameScene extends Phaser.Scene {
         return { kind: 'pickup', label: p.kind === 'chest' ? 'ABRIR' : 'RECOGER', act: () => net.send({ t: 'pickup', id: p.id }) };
       }
     }
+    for (const mc of S.life.mc) if (Math.hypot(mc[1] - mx, mc[2] + 0.3 - my) < 2.2) return { kind: 'merchant', label: 'COMPRAR: ' + String(mc[3]).toUpperCase(), act: () => bus.emit('merchant_open', mc[0]) };
+    for (const cv of S.life.cv) if (Math.hypot(cv[1] - mx, cv[2] + 0.3 - my) < 2.2) return { kind: 'cave', label: 'ENTRAR: CUEVA MISTERIOSA', act: () => net.send({ t: 'cavein', id: cv[0] }) };
     for (const sg of this.world.signs) {
       if (Math.hypot(sg.x + 0.5 - mx, sg.y + 0.8 - my) < 1.6) return { kind: 'sign', label: 'LEER', act: () => bus.emit('dialog', { name: 'Cartel', lines: [sg.text] }) };
     }
@@ -586,6 +606,7 @@ export class GameScene extends Phaser.Scene {
     S.me = { hp: m.me[0], mhp: m.me[1], cds: m.me[2], rush: m.me[3], focus: m.me[4], stance: m.me[5] || 'attack', duel: m.me[6] || 0, fight: !!m.me[7] };
     this.syncDrops(m.dr || []);
     this.syncCamps(m.cp || []);
+    this.syncLife(m);
     S.tg = m.tg.map((g: any) => ({ id: g[0], shape: g[1], x: g[2], y: g[3], r: g[4], r2: g[5], x2: g[6], y2: g[7], w: g[8], at: this.time.now + g[9], total: g[10], fx: g[11] }));
     const fv = this.mons.get(S.me.focus);
     S.focusInfo = fv ? { id: fv.id, key: fv.key, lvl: fv.lvl, hp: fv.hp, shiny: fv.shiny, flags: fv.flags, status: fv.status } : null;
@@ -594,6 +615,72 @@ export class GameScene extends Phaser.Scene {
 
   campSprites = new Map<number, { tent: Phaser.GameObjects.Image; fire: Phaser.GameObjects.Image; flame: Phaser.GameObjects.Image; tw: Phaser.Tweens.Tween }>();
   /** Campamentos visibles: tienda, hoguera con llama animada, chispas y luz cálida de noche. */
+  // ------------------------------------------------------------------ vida del mundo: IAs, mercaderes y cuevas
+  aiViews = new Map<number, PlayerView>();
+  merchantViews = new Map<number, { s: Phaser.GameObjects.Sprite; sh: Phaser.GameObjects.Image; l: Phaser.GameObjects.Text }>();
+  caveViews = new Map<number, { img: Phaser.GameObjects.Image; l: Phaser.GameObjects.Text }>();
+  syncLife(m: any) {
+    const now = this.time.now, ts = m.ts;
+    S.life = { ai: m.ai || [], mc: m.mc || [], cv: m.cv || [] };
+    const seen = new Set<number>();
+    const MOOD_COL = ['#a6f0b2', '#ff9c8a', '#f0e29a'], MOOD_TXT = ['amistosa', 'rival', 'tímida'];
+    for (const [id, x, y, dir, mov, name, lvl, mood, look, say, foe] of S.life.ai) {
+      seen.add(id);
+      let v = this.aiViews.get(id);
+      const lk = { hat: look[0], shirt: look[1], skin: look[2], hair: look[3], pants: look[4], cap: look[5], style: look[6], acc: look[7] };
+      if (!v) { v = new PlayerView(id, this, lk, ''); v.x = x; v.y = y; this.aiViews.set(id, v); }
+      v.name.setText(`${foe ? '⚔ ' : ''}IA·${name}  Nv.${lvl}`).setColor(foe ? '#ff6a5a' : MOOD_COL[mood] || '#fff');
+      (v as any).mood = MOOD_TXT[mood];
+      v.buf.push({ t: ts, x, y }); if (v.buf.length > 12) v.buf.shift();
+      v.dir = dir; v.moving = !!mov; v.seenAt = now;
+      if (say && (v as any).lastSay !== say) { (v as any).lastSay = say; this.speech(v, say); }
+      if (!say) (v as any).lastSay = '';
+    }
+    for (const [id, v] of this.aiViews) if (!seen.has(id) && now - v.seenAt > 1200) { v.destroy(); this.aiViews.delete(id); }
+    const ms = new Set<number>();
+    for (const [id, x, y, name] of S.life.mc) {
+      ms.add(id);
+      if (this.merchantViews.has(id)) continue;
+      const px = x * PX, py = (y + 0.5) * PX;
+      const s = this.add.sprite(px, py, npcTexture(this, 4), 0).setOrigin(0.5, 0.94).setScale(TRAINER_SCALE).setDepth(py);
+      const sh = this.add.image(px, py - 1, 'shadow').setDepth(-30).setScale(0.55, 0.8);
+      const l = worldLabel(this, '🛒 ' + name, '#ffd866').setPosition(px, py - 29).setDepth(22000).setScale(this.txtScale);
+      this.merchantViews.set(id, { s, sh, l });
+      this.fx.ring(px, py - 6, '#ffd866', 22, 600);
+    }
+    for (const [id, v] of this.merchantViews) if (!ms.has(id)) { v.s.destroy(); v.sh.destroy(); v.l.destroy(); this.merchantViews.delete(id); }
+    for (const v of this.merchantViews.values()) { v.l.setScale(this.txtScale); if (Math.random() < 0.04) this.fx.burst(v.s.x + (Math.random() - 0.5) * 10, v.s.y - 14, '#ffe070', 1, 'star', { speed: { min: 4, max: 10 }, lifespan: 700, gravityY: -12 }); }
+    const cs = new Set<number>();
+    for (const [id, x, y, , cleared, lvl] of S.life.cv) {
+      cs.add(id);
+      let c = this.caveViews.get(id);
+      const px = x * PX, py = (y + 0.6) * PX;
+      if (!c) {
+        const img = this.add.image(px, py, 'obj:cave:1').setOrigin(0.5, 1).setDepth(py - 2).setTint(0xc8a0ff);
+        const l = worldLabel(this, '', '#d8b8ff').setPosition(px, py - 34).setDepth(22000);
+        c = { img, l }; this.caveViews.set(id, c);
+        this.tweens.add({ targets: img, scaleX: 1.04, scaleY: 1.04, yoyo: true, repeat: -1, duration: 900, ease: 'Sine.InOut' });
+      }
+      c.l.setText(cleared ? '🕳 Cueva (despejada)' : `🕳 Cueva misteriosa · Nv.${lvl}`).setScale(this.txtScale);
+      if (!cleared && Math.random() < 0.12) this.fx.burst(px + (Math.random() - 0.5) * 18, py - 6, Math.random() < 0.5 ? '#b070ff' : '#70e0ff', 1, 'spark', { speed: { min: 4, max: 14 }, lifespan: 900, gravityY: -20 });
+    }
+    for (const [id, c] of this.caveViews) if (!cs.has(id)) { c.img.destroy(); c.l.destroy(); this.caveViews.delete(id); }
+  }
+
+  /** Bocadillo de texto sobre un entrenador (IAs). */
+  speech(v: PlayerView, text: string) {
+    v.bubble?.destroy();
+    const z = Math.max(1, this.cameras.main.zoom);
+    const t = this.add.text(0, -3 / z, text, { fontFamily: '"Pixelify Sans", monospace', fontSize: '13px', color: '#1a2030', wordWrap: { width: 220 }, align: 'center', resolution: 1 }).setOrigin(0.5, 1).setScale(1 / z);
+    const w = t.displayWidth + 8 / z, h = t.displayHeight + 5 / z;
+    const g = this.add.graphics();
+    g.fillStyle(0xffffff, 0.96); g.fillRoundedRect(-w / 2, -h - 1 / z, w, h, 3 / z); g.lineStyle(1 / z, 0x202030, 1); g.strokeRoundedRect(-w / 2, -h - 1 / z, w, h, 3 / z);
+    g.fillTriangle(-2, -1 / z, 2, -1 / z, 0, 2);
+    const c = this.add.container(0, 0, [g, t]).setDepth(22600);
+    v.bubble = c;
+    this.time.delayedCall(4200, () => { if (v.bubble === c) { c.destroy(); v.bubble = null; } });
+  }
+
   syncCamps(list: any[]) {
     const seen = new Set<number>();
     for (const [id, x, y] of list) {
@@ -644,6 +731,7 @@ export class GameScene extends Phaser.Scene {
     if (roamer && v) { this.legendFx(v); return; }
     if (forMe) {
       audio.play(aggro ? 'boss' : 'event', { vol: aggro ? 0.35 : 0.5 });
+      if (v) { const sp = SPECIES[v.key]; if (sp) audio.cry(sp.dex - 1); }
       if (aggro) { this.cameras.main.shake(140, 0.0025); bus.emit('danger'); }
       bus.emit('ambush', { id, aggro });
     }
@@ -1141,6 +1229,10 @@ export class GameScene extends Phaser.Scene {
     for (const p of this.players.values()) {
       const s = sample(p.buf, rt); p.x = s.x; p.y = s.y;
       this.drawTrainer(p, p.x, p.y, p.dir, p.moving, time, p.hp);
+    }
+    for (const p of this.aiViews.values()) {
+      const s = sample(p.buf, rt); p.x = s.x; p.y = s.y;
+      this.drawTrainer(p, p.x, p.y, p.dir, p.moving, time, 100);
     }
     // pokémon
     this.epicGfx ||= this.add.graphics().setDepth(-28);

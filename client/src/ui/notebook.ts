@@ -6,6 +6,88 @@ import { audio } from '../systems/audio';
 
 const HISTORY: { ver: string; date: string; items: string[] }[] = [
   {
+    ver: '2.23 · Notificaciones de Diario e Interactividad de Entrenador',
+    date: '27 de octubre de 2026',
+    items: [
+      'Aviso visual en Diario [R]: el botón de la barra inferior se resalta en dorado cuando completas cualquiera de las 12 investigaciones de campo.',
+      'Audio de fanfarria alegre al entregar investigaciones individuales o múltiples en el laboratorio de campo.',
+      'Nuevo comando de chat /diario o /research para abrir tus tareas de campo al instante.',
+      'Equipo interactivo en la Tarjeta de Entrenador [K]: haz clic en cualquier Pokémon para escuchar su grito y examinarlo en Equipo.',
+      'Tooltip descriptivo sobre el minimapa indicando el acceso directo al Mapa [M].',
+    ],
+  },
+  {
+    ver: '2.22 · Navegación por Teclado y Marcas Temporales en Chat',
+    date: '27 de octubre de 2026',
+    items: [
+      'Navegación con flechas del teclado: pulsa Flecha Izquierda o Derecha en la Pokédex [P] o en Equipo [T] para pasar de Pokémon con su grito retro.',
+      'Marcas temporales sutiles [HH:MM] añadidas a todos los mensajes del chat general, de zona, de grupo y del sistema.',
+      'Nuevo comando de chat /limpiar o /clear para vaciar el historial de mensajes cuando lo desees.',
+      'Respuesta acústica táctil al cambiar o borrar motes en la ficha de equipo.',
+    ],
+  },
+  {
+    ver: '2.21 · Avisos de Mejoras y Coherencia Táctil',
+    date: '27 de octubre de 2026',
+    items: [
+      'Indicador de mejoras activas: el botón [U] del menú inferior resalta con borde dorado cuando tienes suficientes recursos para adquirir al menos una mejora.',
+      'Respuesta táctil completa en Expediciones [X]: clics sonoros al cambiar de tipo de expedición y al seleccionar Pokémon de reserva.',
+      'Sonido acústico táctil al seleccionar Pokémon en la mesa de Intercambio y al retar o invitar jugadores desde Social [O].',
+    ],
+  },
+  {
+    ver: '2.20 · Gestión de Mochila e Inventario Inteligente',
+    date: '27 de octubre de 2026',
+    items: [
+      'Conteo dinámico en tiempo real en las pestañas y secciones de la Mochila [I] (Poké Balls, Curación, Evolución y Especiales).',
+      'Cierre instantáneo de las ventanas de botín y cofres pulsando Escape, Enter, Espacio o haciendo clic en el panel.',
+      'Nuevo comando de chat /mute o /silencio para alternar el audio del juego desde cualquier lugar sin abrir ajustes.',
+      'Botón "✕" de limpieza rápida añadido también a la barra de búsqueda del Mapa del Mundo [M].',
+    ],
+  },
+  {
+    ver: '2.19 · Enlace Bidireccional Dex-Caja y Comandos de Chat',
+    date: '27 de octubre de 2026',
+    items: [
+      'Navegación bidireccional inmediata: pulsa "📖 Dex" en cualquier Pokémon de tu equipo/caja para consultar al instante sus estadísticas base, hábitats y ratio de captura en la Pokédex.',
+      'Botón compacto "✕" en la barra de búsqueda de Equipo/Caja para restablecer rápidamente todos los filtros.',
+      'Nuevos comandos de chat disponibles: /revivir (usa Revivir si tienes bajas), /mejoras, /exp, /tienda, /misiones, /gimnasios y /ajustes.',
+      'Panel de Ayuda [H] actualizado con la lista completa de comandos rápidos.',
+    ],
+  },
+  {
+    ver: '2.18 · Líder de Equipo y Control Acústico',
+    date: '27 de octubre de 2026',
+    items: [
+      'Designación de Líder de Equipo: botón directo "👑 Hacer Líder" en la ficha de equipo e insignia visible en la primera ranura del equipo.',
+      'El compañero que camina junto a ti en el supramundo se actualiza instantáneamente con fanfarria de celebración.',
+      'Control de volumen mejorado en Ajustes con porcentajes dinámicos y botón de 1 clic para silenciar o restaurar el audio al instante.',
+      'Gritos interactivos en encuentros sorpresa: toca la imagen del Pokémon salvaje para oír su grito retro.',
+      'Retroalimentación acústica consistente en las pestañas de la Tienda Pokémon.',
+    ],
+  },
+  {
+    ver: '2.17 · Interacción Táctil y Ventas Rápidas',
+    date: '27 de octubre de 2026',
+    items: [
+      'Gritos acústicos táctiles: haz clic en la imagen del objetivo o en la lista del Radar para escuchar su grito chiptune instantáneamente.',
+      'Clic derecho en las ranuras de tu equipo en el HUD inferior para escuchar el rugido de tu compañero sin abrir menús.',
+      'Venta rápida en lote (💰 ×5) en la Mochila [I] al estar en cualquier pueblo, ahorrando clics repetitivos.',
+      'Resalte estético dorado en la tarjeta de objetivo cuando un Pokémon salvaje es Shiny.',
+      'Corrección en la interacción de caricias desde la ficha 3D de Equipo.',
+    ],
+  },
+  {
+    ver: '2.16 · Exploración Dinámica y Conmutación de Balls',
+    date: '27 de octubre de 2026',
+    items: [
+      'Navegación secuencial con botones ◀ y ▶ en la Pokédex [P] y en la Caja de Equipo [T], reproduciendo el grito de cada Pokémon al pasar.',
+      'Grito procedural en encuentros salvajes: los Pokémon que saltan de la hierba emiten su grito chiptune junto al signo de exclamación.',
+      'Conmutación inteligente de Balls: si se agota tu tipo de Ball activo durante [C], el juego pasa de inmediato a tu siguiente Ball con existencias.',
+      'Aviso sonoro de error y recordatorio claro si te quedas sin ninguna Poké Ball en la mochila.',
+    ],
+  },
+  {
     ver: '2.15 · Control de Destinos y Atajos de Campo',
     date: '27 de octubre de 2026',
     items: [

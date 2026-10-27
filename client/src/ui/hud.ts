@@ -6,7 +6,7 @@ import { SPECIES, SPECIES_LIST, RARITY_NAMES, RARITY_COLORS } from '../../../sha
 import { ZONES } from '../../../shared/zones';
 import { TYPE_NAMES, TYPE_COLORS, typeEffect } from '../../../shared/types';
 import { ITEMS, BALLS } from '../../../shared/items';
-import { SKILLS, QUESTS, trainerXpForLevel, monXpForLevel, teamSlotsFor, LINK_MAP, catchChance, CATCH_BONUS, STATUS_CATCH, critCaptureChance, captureProbability, chainShinyMult, RARITY_CATCH } from '../../../shared/progression';
+import { SKILLS, QUESTS, UPGRADES, upgradeCost, trainerXpForLevel, monXpForLevel, teamSlotsFor, LINK_MAP, catchChance, CATCH_BONUS, STATUS_CATCH, critCaptureChance, captureProbability, chainShinyMult, RARITY_CATCH } from '../../../shared/progression';
 import { TERRAIN_MAP_COLOR, STATUS_NAMES } from '../../../shared/constants';
 import type { World } from '../../../shared/world/worldgen';
 import { monURL, trainerURL } from '../graphics/textures';
@@ -17,6 +17,7 @@ import { Panels } from './panels';
 import { openNotebook } from './notebook';
 import { statValueClient } from './util';
 import { ExplorationGuide } from './exploration';
+import { RESEARCH, researchProgress, researchClaimId } from '../../../shared/research';
 import { GYMS } from '../../../shared/gyms';
 import { seasonAt, weatherAt, seasonLeft, SEASON_NAMES, SEASON_ICONS, WEATHER_NAMES, WEATHER_ICONS } from '../../../shared/weather';
 
@@ -134,6 +135,7 @@ export class Hud {
     this.els.menubar.querySelectorAll<HTMLElement>('[data-open]').forEach(b => b.onclick = () => this.panels.toggle(b.dataset.open!));
     this.els.emotes.innerHTML = ['!', '?', '<3', ':)', ':(', 'Zz', '...', 'GG', 'Ayuda', 'Hola'].map((t, i) => `<button class="btn tiny gray" data-em="${i}">${esc(t)}</button>`).join('');
     this.els.emotes.querySelectorAll<HTMLElement>('[data-em]').forEach(b => b.onclick = () => net.send({ t: 'emote', e: parseInt(b.dataset.em!, 10) }));
+    this.els.mm.title = 'Minimapa (clic para abrir Mapa del Mundo [M])';
     this.els.mm.onclick = () => this.panels.toggle('map');
     const nbBtn = document.getElementById('nb-btn');
     if (nbBtn) nbBtn.onclick = () => openNotebook();
@@ -176,6 +178,17 @@ export class Hud {
       if (k === 'n') { openNotebook(); return; }
       const map: Record<string, string> = { t: 'team', p: 'dex', i: 'inv', u: 'upg', x: 'exp', m: 'map', j: 'quests', o: 'social', h: 'help', r: 'research', g: 'gyms', k: 'trainer' };
       if (map[k]) { this.panels.toggle(map[k]); return; }
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        const dw = this.panels.wins.get('dex');
+        const tw = this.panels.wins.get('team');
+        if (dw) {
+          const btn = dw.body.querySelector(e.key === 'ArrowLeft' ? '#dprev' : '#dnext') as HTMLButtonElement | null;
+          if (btn) { btn.click(); e.preventDefault(); return; }
+        } else if (tw) {
+          const btn = tw.body.querySelector(e.key === 'ArrowLeft' ? '[data-act="mprev"]' : '[data-act="mnext"]') as HTMLButtonElement | null;
+          if (btn) { btn.click(); e.preventDefault(); return; }
+        }
+      }
       if (e.key === 'Escape') { if (this.dialogQueue.length) { this.closeDialog(); return; } if (!this.panels.closeTop()) this.panels.toggle('settings'); }
     }, true);
 
@@ -183,6 +196,19 @@ export class Hud {
     bus.on('mons', () => { this.lastTeamKey = ''; this.renderTeam(); });
     net.on('chat', m => this.addChat(m));
     net.on('note', m => this.toast(m.text, m.kind));
+    net.on('merchant', m => {
+      this.toast(`🛒 ${m.name} ha llegado a ${m.zone} durante ${m.mins} minutos con objetos exclusivos.${S.waypoint ? '' : ' Ruta marcada.'}`, 'gold');
+      if (!S.waypoint) S.waypoint = { x: m.x, y: m.y + 1, name: '🛒 ' + m.name };
+      audio.play('event');
+    });
+    net.on('cave', m => {
+      this.toast(`🕳 ¡Ha aparecido una cueva misteriosa en ${m.zone}! Dentro espera un guardián con tesoro (${m.mins} min).${S.waypoint ? '' : ' Ruta marcada.'}`, 'gold');
+      if (!S.waypoint) S.waypoint = { x: m.x, y: m.y + 1, name: '🕳 Cueva misteriosa' };
+      audio.play('event');
+    });
+    net.on('cavegoal', m => { S.waypoint = { x: m.x, y: m.y, name: '💀 Guardián de la cueva' }; });
+    net.on('mstock', m => { this.merchantStock.set(m.id, m.stock); if (this.merchantId === m.id) this.renderMerchant(); });
+    bus.on('merchant_open', (id: number) => this.openMerchant(id));
     net.on('party', m => { S.party = { id: m.id, members: m.members }; bus.emit('party'); });
     net.on('bosses', m => { S.bosses = m.list; });
     net.on('wev', m => { S.events.set(m.ev.id, { ...m.ev, recv: Date.now() }); this.toast(`EVENTO: ${m.ev.name}`, 'shiny'); audio.play('event'); this.renderEvents(); });
@@ -295,7 +321,47 @@ export class Hud {
     if (cmd === 'mochila' || cmd === 'inv') { this.panels.open('inv'); return; }
     if (cmd === 'mapa' || cmd === 'map') { this.panels.open('map'); return; }
     if (cmd === 'pocion' || cmd === 'potion') { (this as any)._usePotion?.(); return; }
-    this.toast('Comandos: /g /z /p mensaje · /duelo nombre · /intercambio nombre · /ranking · /acampar · /novedades · /huir · /ayuda', 'info');
+    if (cmd === 'revivir' || cmd === 'revive') {
+      const c = S.core;
+      if ((c?.items.revivir || 0) > 0) {
+        net.send({ t: 'use', item: 'revivir' });
+        audio.play('heal', { pitch: 1.25 });
+      } else {
+        this.toast('No te quedan objetos de revivir en la mochila.', 'info');
+      }
+      return;
+    }
+    if (cmd === 'mejoras' || cmd === 'upg') { this.panels.open('upg'); return; }
+    if (cmd === 'expediciones' || cmd === 'exp') { this.panels.open('exp'); return; }
+    if (cmd === 'misiones' || cmd === 'quests') { this.panels.open('quests'); return; }
+    if (cmd === 'diario' || cmd === 'research' || cmd === 'investigacion') { this.panels.open('research'); return; }
+    if (cmd === 'gimnasios' || cmd === 'gyms') { this.panels.open('gyms'); return; }
+    if (cmd === 'tienda' || cmd === 'shop') { this.panels.open('shop'); return; }
+    if (cmd === 'ajustes' || cmd === 'config' || cmd === 'settings') { this.panels.open('settings'); return; }
+    if (cmd === 'clear' || cmd === 'limpiar') {
+      this.chatLog = [];
+      this.renderChat();
+      this.toast('Historial de chat borrado.', 'info');
+      return;
+    }
+    if (cmd === 'mute' || cmd === 'silencio') {
+      const st = S.settings;
+      if (st.music > 0 || st.sfx > 0) {
+        (this as any)._preMute = { m: st.music, s: st.sfx };
+        st.music = 0; st.sfx = 0;
+        this.toast('🔇 Sonido silenciado (/mute para reactivar).', 'info');
+      } else {
+        const pm = (this as any)._preMute;
+        st.music = pm?.m ?? 0.4;
+        st.sfx = pm?.s ?? 0.7;
+        this.toast('🔊 Sonido reactivado.', 'good');
+      }
+      saveSettings();
+      audio.applyVolumes();
+      bus.emit('settings');
+      return;
+    }
+    this.toast('Comandos: /dex · /equipo · /mochila · /mapa · /pocion · /revivir · /mejoras · /exp · /tienda · /misiones · /acampar · /duelo · /intercambio · /ranking · /huir · /ayuda', 'info');
   }
 
   // ------------------------------------------------------------------ entrenador y recursos
@@ -365,8 +431,18 @@ export class Hud {
         <div class="bar hp ${frac < 0.25 ? 'low' : frac < 0.5 ? 'mid' : ''}"><i style="width:${frac * 100}%"></i></div></div>`;
     }
     this.els.team.innerHTML = html;
-    this.els.team.querySelectorAll<HTMLElement>('[data-uid]').forEach(d => d.onclick = () => this.panels.openMon(d.dataset.uid!));
-    this.els.team.querySelectorAll<HTMLElement>('[data-i]').forEach(d => d.onclick = () => this.panels.open('team'));
+    this.els.team.querySelectorAll<HTMLElement>('[data-uid]').forEach(d => {
+      d.onclick = () => { audio.play('ui'); this.panels.openMon(d.dataset.uid!); };
+      d.oncontextmenu = (e) => {
+        e.preventDefault();
+        const ms = monByUid(d.dataset.uid!);
+        if (ms) {
+          audio.cry(SPECIES[ms.sp].dex - 1);
+          this.toast(`♥ ${ms.nick || SPECIES[ms.sp].name} (Nv.${ms.lvl}) ruge con energía.`, 'good');
+        }
+      };
+    });
+    this.els.team.querySelectorAll<HTMLElement>('[data-i]').forEach(d => d.onclick = () => { audio.play('ui'); this.panels.open('team'); });
   }
 
   renderActions() {
@@ -422,6 +498,35 @@ export class Hud {
     }
   }
 
+  // ------------------------------------------------------------------ mercader ambulante
+  merchantStock = new Map<number, any[]>(); merchantId = 0; merchantEl: HTMLElement | null = null;
+  openMerchant(id: number) {
+    this.merchantId = id;
+    if (!this.merchantEl) {
+      this.merchantEl = document.createElement('div'); this.merchantEl.className = 'win merchant-win';
+      this.root.appendChild(this.merchantEl);
+      this.merchantEl.onclick = e => {
+        const b = (e.target as HTMLElement).closest<HTMLElement>('[data-mbuy]');
+        if (b) { net.send({ t: 'mbuy', id: this.merchantId, item: b.dataset.mbuy }); audio.play('ui'); return; }
+        if ((e.target as HTMLElement).closest('[data-mclose]')) this.closeMerchant();
+      };
+      window.addEventListener('keydown', e => { if (e.key === 'Escape' && this.merchantEl?.style.display !== 'none') this.closeMerchant(); });
+    }
+    this.merchantEl.style.display = '';
+    this.renderMerchant();
+  }
+  closeMerchant() { if (this.merchantEl) this.merchantEl.style.display = 'none'; this.merchantId = 0; }
+  renderMerchant() {
+    const el = this.merchantEl; if (!el) return;
+    const mc = S.life.mc.find((m: any) => m[0] === this.merchantId);
+    if (!mc) { el.innerHTML = '<div class="mw-head"><b>Mercader ambulante</b><button data-mclose>×</button></div><p class="muted">El mercader se ha marchado.</p>'; return; }
+    const stock = this.merchantStock.get(mc[0]) || mc[5], left = Math.ceil(mc[4] / 60000), money = S.core?.money || 0;
+    el.innerHTML = `<div class="mw-head"><b>🛒 ${esc(mc[3])}</b><span class="muted">se va en ${left} min</span><button data-mclose aria-label="Cerrar">×</button></div>
+      <p class="mw-sub">Objetos exclusivos de esta zona. Existencias limitadas: cuando se acaban, se acaban.</p>
+      <div class="mw-list">${stock.map((s: any) => `<div class="mw-item ${s.qty ? '' : 'out'}"><div><b>${esc(ITEMS[s.item]?.name || s.item)}</b><small>${esc(ITEMS[s.item]?.desc || '')}</small></div><span class="mw-qty">×${s.qty}</span><button class="btn small ${s.qty && money >= s.price ? 'gold' : 'gray'}" data-mbuy="${s.item}" ${s.qty ? '' : 'disabled'}>${s.price} ₽</button></div>`).join('')}</div>
+      <div class="mw-foot">Tienes <b class="gold">${money} ₽</b></div>`;
+  }
+
   // ------------------------------------------------------------------ objetivo y jefe
   renderTarget() {
     const f = S.focusInfo;
@@ -459,11 +564,14 @@ export class Hud {
     const effTag = bestEff > 1 ? ` <span class="tag" style="background:#1e3a28;color:#68f090;font-size:10px" title="Tu ${esc(bestAttacker)} tiene ventaja elemental (×${bestEff})">⚔ ×${bestEff}</span>` : bestEff < 1 ? ` <span class="tag" style="background:#3a2418;color:#ffb070;font-size:10px" title="Resiste los tipos de tu equipo">⚠ ×${bestEff}</span>` : '';
     const stTag = f.status ? ` <span class="tag" style="background:#3a2048;color:#f0c0ff;font-size:10px">${esc(STATUS_NAMES[f.status] || '')}</span>` : '';
     const tierTag = (f.flags & 64) ? ' <span class="tag" style="background:#5a1820;color:#ffd080;font-size:10px">👑 ALFA</span>' : (f.flags & 8192) ? ' <span class="tag" style="background:#4a3010;color:#ffe060;font-size:10px">⚡ ERRANTE</span>' : '';
-    box.innerHTML = `<img src="${monURL(f.key, f.shiny, 2)}"><div class="grow col" style="gap:2px">
+    box.classList.toggle('shiny-target', !!f.shiny);
+    box.innerHTML = `<img src="${monURL(f.key, f.shiny, 2)}" class="target-avatar" style="cursor:pointer" title="Pulsa para escuchar el grito de ${esc(sp.name)}"><div class="grow col" style="gap:2px">
       <div class="row" style="justify-content:space-between"><div class="nm">${f.shiny ? '<span class="gold">✦</span> ' : ''}${esc(sp.name)} <span class="muted">Nv.${f.lvl}</span></div>${!isGymOrPvp ? `<span class="row" style="gap:3px"><button class="btn tiny ${S.me.fight ? 'gray' : 'green'}" id="tgt-fight" title="Ordena a tu equipo atacarlo (o doble clic sobre él)">${S.me.fight ? '⚔ Atacando' : '⚔ Luchar'}</button><button class="btn tiny red" id="tgt-throw" title="Probabilidad real con ${esc(ITEMS[ballId]?.name || 'Ball')} (incluye ${Math.round(critP * 100)}% crítico) · Pulsa [C]">◓ ${totPct}%</button></span>` : ''}</div>
       <div>${sp.types.map(t => `<span class="tag" style="background:${TYPE_COLORS[t]}">${TYPE_NAMES[t]}</span>`).join('')} <span class="tag" style="background:${RARITY_COLORS[sp.rarity]};color:#000">${RARITY_NAMES[sp.rarity]}</span>${tierTag}${stTag}${effTag}</div>
       <div class="bar hp ${f.hp < 25 ? 'low' : f.hp < 50 ? 'mid' : ''}"><i style="width:${f.hp}%"></i></div>
-      <div class="catch muted">${f.flags & 2048 ? 'Pokémon de líder · Derrota a todo su equipo para ganar la medalla.' : f.flags & 16384 ? 'Pokémon de entrenador rival en duelo PvP.' : `${caught ? '✔ Registrado' : '★ ¡Nuevo!'} · ${f.flags & 128 ? '<b class="gold">¡Agotado! Lanza una Ball</b>' : f.hp <= 15 ? '<b class="gold">¡Debilitado! Pulsa C</b>' : (S.me.fight ? 'Tu equipo lo está atacando. Cuanta menos vida, más fácil capturarlo.' : 'Solo seleccionado: pulsa Luchar o haz doble clic para atacar.')}`}</div></div>`;
+      <div class="catch muted">${f.flags & 32768 ? (f.flags & 4096 ? '⚔ Pokémon del entrenador IA que te ha retado: derrota a todo su equipo.' : 'Pokémon de un entrenador IA. No se puede capturar.') : f.flags & 2048 ? 'Pokémon de líder · Derrota a todo su equipo para ganar la medalla.' : f.flags & 16384 ? 'Pokémon de entrenador rival en duelo PvP.' : `${caught ? '✔ Registrado' : '★ ¡Nuevo!'} · ${f.flags & 128 ? '<b class="gold">¡Agotado! Lanza una Ball</b>' : f.hp <= 15 ? '<b class="gold">¡Debilitado! Pulsa C</b>' : (S.me.fight ? 'Tu equipo lo está atacando. Cuanta menos vida, más fácil capturarlo.' : 'Solo seleccionado: pulsa Luchar o haz doble clic para atacar.')}`}</div></div>`;
+    const av = box.querySelector('.target-avatar') as HTMLElement | null;
+    if (av) av.onclick = () => { audio.cry(sp.dex - 1); audio.play('ui'); };
     const tb = box.querySelector('#tgt-throw') as HTMLElement | null;
     if (tb) tb.onclick = () => bus.emit('throw');
     const fb = box.querySelector('#tgt-fight') as HTMLElement | null;
@@ -512,7 +620,15 @@ export class Hud {
     const readyQ = QUESTS.some(q => !c.claimed.includes(q.id) && statValueClient(q.stat) >= q.n) || (c.bounties || []).some((b: any) => b.prog >= b.n);
     const readyExp = (c.expeditions || []).some((e: any) => net.serverNow() >= e.end);
     const readyEvo = S.team.some(t => { const ms = monByUid(t.uid); return ms && (SPECIES[ms.sp]?.evo || []).some(e => e.level && t.lvl >= e.level); });
-    const badgeMap: Record<string, boolean> = { quests: readyQ, exp: readyExp, team: readyEvo };
+    const readyUpg = UPGRADES.some(u => {
+      const l = c.upgrades[u.id] || 0;
+      if (l >= u.max) return false;
+      const cost = upgradeCost(u, l);
+      const curVal = u.cur === 'money' ? c.money : u.cur === 'crystals' ? c.crystals : (c.ess[u.cur] || 0);
+      return curVal >= cost;
+    });
+    const readyRes = RESEARCH.some(t => !c.claimed.includes(researchClaimId(t.id)) && researchProgress(c, t) >= t.goal);
+    const badgeMap: Record<string, boolean> = { quests: readyQ, exp: readyExp, team: readyEvo, upg: readyUpg, research: readyRes };
     this.els.menubar.querySelectorAll<HTMLElement>('[data-open]').forEach(b => {
       const id = b.dataset.open!;
       b.style.borderColor = badgeMap[id] ? '#ffd866' : '';
@@ -567,6 +683,9 @@ export class Hud {
         ctx.strokeRect(x - 3.5, y - 3.5, 7, 7);
       }
     }
+    for (const a of S.life.ai) { const [x, y] = toM(a[1], a[2]); ctx.fillStyle = a[10] ? '#ff4040' : ['#80f090', '#ff9070', '#f0e070'][a[7]] || '#fff'; ctx.beginPath(); ctx.arc(x, y, 2.4, 0, 7); ctx.fill(); }
+    for (const m of S.life.mc) { const [x, y] = toM(m[1], m[2]); ctx.fillStyle = '#ffd040'; ctx.fillRect(x - 3, y - 3, 6, 6); ctx.strokeStyle = '#000'; ctx.strokeRect(x - 3.5, y - 3.5, 7, 7); }
+    for (const c of S.life.cv) { const [x, y] = toM(c[1], c[2]); ctx.fillStyle = '#b070ff'; ctx.beginPath(); ctx.arc(x, y, 3.6, 0, 7); ctx.fill(); ctx.strokeStyle = '#fff'; ctx.stroke(); }
     for (const b of S.bosses) { if (!b.alive) continue; const [x, y] = toM(b.x, b.y); if (x < 0 || y < 0 || x > 168 || y > 168) continue; ctx.strokeStyle = '#ff3030'; ctx.strokeRect(x - 4, y - 4, 8, 8); }
     for (const e of S.events.values()) { if (!e.x) continue; const [x, y] = toM(e.x, e.y); ctx.fillStyle = '#ffd040'; ctx.beginPath(); ctx.arc(Math.max(4, Math.min(164, x)), Math.max(4, Math.min(164, y)), 4, 0, 7); ctx.fill(); }
     for (const p of sc.players.values()) { const [x, y] = toM(p.x, p.y); const meta = S.players.get(p.id); ctx.fillStyle = S.party.id && meta?.party === S.party.id ? '#60f0ff' : '#ffffff'; ctx.fillRect(x - 2, y - 2, 4, 4); }
@@ -601,7 +720,9 @@ export class Hud {
   // ------------------------------------------------------------------ chat
   addChat(m: any) {
     const ch = m.ch === 'sys' ? 'sys' : m.ch;
-    const html = ch === 'sys' ? `<div class="sys">${esc(m.msg)}</div>` : `<div class="${ch}"><span class="from">${ch === 'p' ? '[G] ' : ch === 'z' ? '[Z] ' : ''}${esc(m.from)}:</span> ${esc(m.msg)}</div>`;
+    const d = new Date();
+    const timeStr = `<span class="muted" style="font-size:10px;margin-right:4px;opacity:.7">${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}</span>`;
+    const html = ch === 'sys' ? `<div class="sys">${timeStr}${esc(m.msg)}</div>` : `<div class="${ch}">${timeStr}<span class="from">${ch === 'p' ? '[G] ' : ch === 'z' ? '[Z] ' : ''}${esc(m.from)}:</span> ${esc(m.msg)}</div>`;
     this.chatLog.push({ ch, html });
     if (this.chatLog.length > 150) this.chatLog.shift();
     this.renderChat();
@@ -660,9 +781,21 @@ export class Hud {
     const d = el('div', 'panel loot');
     const title = m.title || (m.kind === 'chest' ? 'Cofre' : m.kind === 'item' ? 'Objeto encontrado' : 'Recompensa');
     d.innerHTML = `<h4>${esc(title)}</h4><div class="loot-grid">${(m.lines || []).map((l: string) => lootTile(l)).join('')}</div><div style="text-align:right;margin-top:8px"><button class="btn small">OK</button></div>`;
-    (d.querySelector('button') as HTMLElement).onclick = () => d.remove();
+    const closeLoot = () => {
+      window.removeEventListener('keydown', onLootKey);
+      d.remove();
+    };
+    const onLootKey = (e: KeyboardEvent) => {
+      if (['Escape', 'Enter', ' '].includes(e.key)) {
+        e.preventDefault();
+        closeLoot();
+      }
+    };
+    window.addEventListener('keydown', onLootKey);
+    (d.querySelector('button') as HTMLElement).onclick = closeLoot;
+    d.onclick = (e) => { if (e.target === d) closeLoot(); };
     this.root.appendChild(d);
-    setTimeout(() => d.remove(), m.kind === 'item' ? 2200 : 4500);
+    setTimeout(closeLoot, m.kind === 'item' ? 2200 : 4500);
   }
 
   setStance(id: string) {
@@ -678,10 +811,12 @@ export class Hud {
     const sp = SPECIES[v.key];
     const box = this.els.enc;
     const caught = (S.core?.dex.caught[v.key] || 0) > 0;
-    box.innerHTML = `<img src="${monURL(v.key, v.shiny, 2)}" alt=""><div class="grow"><small>${aggro ? '¡TE ATACA!' : 'ENCUENTRO SALVAJE'}</small>
+    box.innerHTML = `<img src="${monURL(v.key, v.shiny, 2)}" class="enc-avatar" style="cursor:pointer" title="Pulsa para escuchar el grito de ${esc(sp.name)}"><div class="grow"><small>${aggro ? '¡TE ATACA!' : 'ENCUENTRO SALVAJE'}</small>
       <b>${v.shiny ? '✦ ' : ''}${esc(sp.name)} <span class="muted">Nv.${v.lvl}</span></b>
       <div>${sp.types.map(t => `<span class="tag" style="background:${TYPE_COLORS[t]}">${TYPE_NAMES[t]}</span>`).join('')}${aggro ? '<span class="tag aggro">Agresivo</span>' : ''}${v.tier?.label ? `<span class="tag" style="background:${v.tier.color};color:#1a1220">${esc(v.tier.label)}</span>` : ''}${caught ? '' : '<span class="tag new">¡Nuevo!</span>'}</div></div>
       <div class="enc-actions"><button class="btn small red" data-e="fight">Luchar</button><button class="btn small" data-e="catch">Capturar [C]</button><button class="btn small gray" data-e="flee">Huir [F]</button></div>`;
+    const encAv = box.querySelector('.enc-avatar') as HTMLElement | null;
+    if (encAv) encAv.onclick = () => { audio.cry(sp.dex - 1); audio.play('ui'); };
     box.hidden = false; box.classList.toggle('aggro', aggro);
     box.querySelectorAll<HTMLElement>('[data-e]').forEach(b => b.onclick = () => {
       const e = b.dataset.e;

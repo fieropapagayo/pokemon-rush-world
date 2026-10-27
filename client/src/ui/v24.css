@@ -308,3 +308,34 @@
 .quest-card .qdone { font-size:10px; color:#7ad88a; }
 .quest-card.locked { opacity:.42; filter:saturate(.4); } .quest-card.locked .qbar i { background:#3a4a52; box-shadow:none; }
 @keyframes qpulse { 50% { box-shadow:0 0 12px #ffd866aa; transform:scale(1.06); } }
+
+/* mercader ambulante */
+.merchant-win { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:min(440px,calc(100vw - 32px)); max-height:80vh; overflow:auto; z-index:60; padding:14px 16px; border-radius:14px; background:linear-gradient(170deg,#2a2412f5,#16140ef5); border:1px solid #d9a62e; box-shadow:0 16px 40px #000a; color:#f3ead2; }
+.merchant-win .mw-head { display:flex; align-items:center; gap:8px; } .merchant-win .mw-head b { flex:1; font-size:16px; color:#ffd866; }
+.merchant-win .mw-head button { background:none; border:0; color:#fff; font-size:20px; cursor:pointer; }
+.merchant-win .mw-sub { font-size:11px; color:#c8b890; margin:4px 0 10px; }
+.merchant-win .mw-list { display:flex; flex-direction:column; gap:6px; }
+.merchant-win .mw-item { display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:10px; background:#00000040; border:1px solid #5a4a24; }
+.merchant-win .mw-item > div { flex:1; min-width:0; } .merchant-win .mw-item small { display:block; font-size:10px; color:#b8a880; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.merchant-win .mw-item.out { opacity:.45; } .merchant-win .mw-qty { font-size:12px; color:#e8d8a8; }
+.merchant-win .mw-foot { margin-top:10px; font-size:12px; text-align:right; }
+
+/* Target Card v2.17 */
+.target.shiny-target {
+  border-color: #ffd860bb;
+  box-shadow: 0 0 14px #ffcc003a, inset 0 0 8px #ffdd4420;
+}
+.target .target-avatar {
+  transition: transform 0.15s ease;
+}
+.target .target-avatar:hover {
+  transform: scale(1.1);
+}
+
+/* Encounter Card Avatar hover */
+.enc .enc-avatar {
+  transition: transform 0.15s ease;
+}
+.enc .enc-avatar:hover {
+  transform: scale(1.1);
+}

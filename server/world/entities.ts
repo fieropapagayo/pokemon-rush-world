@@ -46,6 +46,8 @@ export class MonEntity {
   hpMult = 1;
   zone = 0;
   ambushFor = 0;          // jugador al que sorprendió (encuentro por pasos)
+  ai: any = null;         // entrenador IA al que pertenece (server/world/ai.ts)
+  caveId = 0;             // guardián de una cueva misteriosa
   aggro = false;          // va directo a por el entrenador
   roamer = false;         // legendario errante
   ignoreP = 0; ignoreUntil = 0; // tras huir, deja en paz a ese jugador un rato
