@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Entrar · Pokémon Rush World</title>
+  <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&family=Press+Start+2P&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    .login { min-height: 100vh; display: grid; place-items: center; padding: 16px; background: linear-gradient(180deg, #5fa5c8 0%, #a9d2d8 52%, #79b567 52%, #4f8a52 100%); }
+    .login .card { width: min(420px, 100%); text-align: center; background: #12232af0; color: #eef3ea; border-color: #f2d28b45; }
+    .login h1 { font-size: 22px; margin: 6px 0 12px; }
+    .login p { color: #b9d0c8; font-size: 15px; }
+    #gbtn { display: flex; justify-content: center; margin: 18px 0 8px; min-height: 44px; }
+    .msg { min-height: 22px; color: #ff9a8a; font-size: 14px; }
+    .alt { font-size: 14px; color: #a3bcb8; margin-top: 14px; }
+  </style>
+</head>
+<body>
+  <div class="login">
+    <div class="card">
+      <div class="ball"></div>
+      <h1>POKÉMON<br>RUSH WORLD</h1>
+      <p>Entra con tu cuenta de Google. Tu progreso queda ligado a ella y lo recuperas en cualquier PC o móvil, sin descargar nada.</p>
+      <div id="gbtn"></div>
+      <div class="msg" id="msg"></div>
+      <div class="alt"><a href="/jugar">Entrar sin Google</a> · <a href="/">Ver el ranking</a></div>
+    </div>
+  </div>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script>
+    const msg = t => { document.getElementById('msg').textContent = t; };
+    const back = new URLSearchParams(location.search).get('back') || '';
+    async function onCredential(r) {
+      msg('Comprobando tu cuenta...');
+      try {
+        const res = await fetch('/api/google', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ credential: r.credential, back }) });
+        const d = await res.json();
+        if (!res.ok) return msg(d.error || 'No se pudo iniciar sesión.');
+        if (!d.back) return msg('El servidor de juego está apagado ahora mismo. Vuelve a intentarlo cuando esté encendido.');
+        location.href = d.back + '/#gticket=' + encodeURIComponent(d.ticket);
+      } catch { msg('No se pudo contactar con el servidor.'); }
+    }
+    async function init() {
+      const cfg = await fetch('/api/config').then(r => r.json()).catch(() => ({}));
+      if (!cfg.googleClientId) return msg('El acceso con Google aún no está activado en este servidor.');
+      const wait = () => window.google?.accounts?.id ? start(cfg.googleClientId) : setTimeout(wait, 100);
+      wait();
+    }
+    function start(clientId) {
+      google.accounts.id.initialize({ client_id: clientId, callback: onCredential, ux_mode: 'popup' });
+      google.accounts.id.renderButton(document.getElementById('gbtn'), { theme: 'filled_blue', size: 'large', shape: 'pill', text: 'continue_with', locale: 'es' });
+    }
+    init();
+  </script>
+</body>
+</html>

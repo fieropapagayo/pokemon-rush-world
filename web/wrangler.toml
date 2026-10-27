@@ -1,0 +1,29 @@
+# Cloudflare Worker de Pokémon Rush World (plan gratuito: Workers + D1).
+# Despliegue: ejecuta desplegar.bat (o mira README.md de esta carpeta).
+name = "pokemon-rush-world"
+main = "src/worker.ts"
+compatibility_date = "2025-09-01"
+
+# La web pública (ranking, perfiles, estado del servidor) se sirve desde public/
+[assets]
+directory = "./public"
+binding = "ASSETS"
+# el Worker atiende todas las peticiones (cabeceras de seguridad y límites también en las páginas)
+run_worker_first = true
+
+# Base de datos. desplegar.bat crea la base "prw" y rellena aquí su database_id.
+[[d1_databases]]
+binding = "DB"
+database_name = "prw"
+database_id = "5811a432-0695-49ae-9eb7-edc4ac73a732"   # desplegar.bat lo sustituye por el tuyo
+
+# Inicio de sesión con Google: pega aquí el "ID de cliente" OAuth (no es secreto). Mira web/README.md.
+[vars]
+GOOGLE_CLIENT_ID = ""
+
+# Cron
+[triggers]
+crons = ["*/10 * * * *"]   # cada 10 min mantiene despierto el servidor de juego; cada hora, estadísticas
+
+# La clave secreta SYNC_KEY NO va aquí: se guarda cifrada con
+#   npx wrangler secret put SYNC_KEY

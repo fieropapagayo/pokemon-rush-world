@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pokémon Rush World · Ranking</title>
+  <meta name="description" content="Estadísticas, ranking y perfiles de los entrenadores de Pokémon Rush World (fan game no oficial)." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='7' fill='%23e33'/%3E%3Cpath d='M1 8h14v1a7 7 0 0 1-14 0z' fill='%23fff'/%3E%3Cpath d='M1 8h14' stroke='%23222' stroke-width='1.4'/%3E%3Ccircle cx='8' cy='8' r='2.4' fill='%23fff' stroke='%23222' stroke-width='1.2'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&family=Press+Start+2P&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="hero">
+    <div class="wrap">
+      <div class="ball"></div>
+      <h1>POKÉMON<br>RUSH WORLD</h1>
+      <p class="sub">Versión 2.8.1 · Atmósfera e Iluminación · 91 Especies en 3D · Ranking mundial</p>
+      <div class="status" id="status"><span class="dot"></span><span>Comprobando servidor...</span></div>
+      <div class="cta"><a class="btn play" id="play" href="/jugar">▶ Jugar ahora</a><a class="btn ghost" id="glogin" href="/login.html">G Entrar con Google</a><a class="btn ghost" href="#ranking">Ver ranking</a></div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="tiles" id="tiles" aria-label="Estadísticas globales"></section>
+
+    <section class="card" id="ranking">
+      <div class="head">
+        <h2>Ranking de entrenadores</h2>
+        <form id="search" class="search" autocomplete="off"><input id="q" placeholder="Buscar entrenador..." maxlength="16" aria-label="Buscar entrenador" /><button class="btn small">Buscar</button></form>
+      </div>
+      <div class="tabs" role="tablist" id="tabs">
+        <button data-by="level" class="on">Nivel</button>
+        <button data-by="dex">Pokédex</button>
+        <button data-by="shiny">Shinies</button>
+        <button data-by="legends">Legendarios</button>
+        <button data-by="pvp">PvP (Elo)</button>
+        <button data-by="catches">Capturas</button>
+        <button data-by="playtime">Tiempo jugado</button>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>#</th><th>Entrenador</th><th>Nivel</th><th>Pokédex</th><th>Shinies</th><th>Elo</th><th class="hide-sm">Equipo</th><th class="hide-sm">Jugado</th></tr></thead><tbody id="rows"><tr><td colspan="8" class="muted">Cargando...</td></tr></tbody></table></div>
+    </section>
+
+    <section class="card" style="margin-bottom:18px">
+      <details>
+        <summary style="cursor:pointer;font-weight:600;color:#ffd24a">📓 Libreta de Novedades · Versión 2.8.1 (Actualización en Tiempo Real)</summary>
+        <ul style="margin:10px 0 0;padding-left:20px;line-height:1.6;font-size:14px;color:#d8e2dc">
+          <li><b>🌅 Atmósfera Visual Avanzada, Luces de Color y Huellas Dinámicas:</b> gradación de color cinematográfica por hora y clima con viñeta suave, sombras de nubes que recorren el mapa impulsadas por el viento, rayos de sol entre la arboleda, destellos sobre el agua, luces nocturnas cálidas (farolas, hogueras y auras de fuego/eléctricas) y huellas efímeras en arena y nieve (conmutable en Ajustes).</li>
+          <li><b>✨ Interfaz Compacta Sin Ruido Visual, 🚀 Envío Rápido de Expediciones y ◓ Vínculo Pokédex→Caja:</b> paneles plegables limpios en Misiones, Mochila, Equipo y Mapa, rastreador del HUD minimizable con indicadores dorados en el dock, botón "🚀 Envío rápido" en Expediciones [X], botón "◓ En Caja" en Pokédex [P] y estela elemental sutil al caminar con Pokémon Link activo.</li>
+          <li><b>🏕 Hoguera de Campamento [Z] y ♥ Acariciar Pokémon en el Mundo:</b> enciende una hoguera animada con luz nocturna cálida que cura a tus aliados cercanos, y haz clic sobre tus Pokémon seguidores (o usa "♥ Acariciar" en Equipo [T]) para verlos saltar de alegría con lluvia de corazones.</li>
+          <li><b>⚡ Armador de Sinergias Pokémon Link, ⚔ Predictor Elemental + DPS en Vivo, ☠ Radar de Jefes y 🏅 Trofeos:</b> equipa en 1 clic equipos optimizados para cualquier sinergia disponible ("⚡ Armar sinergia"), consulta la ventaja elemental de tu equipo ("⚔ ×2") y tu DPS en vivo ("⚔ /s"), localiza a los 7 Jefes de Mundo en el Mapa [M] y desbloquea Trofeos Bronce/Plata/Oro/Platino en Misiones [J].</li>
+          <li><b>📓 Libreta de Novedades ([N]) y Actualización en Tiempo Real:</b> cuaderno de campo interactivo al entrar al juego con sincronización en vivo ante cada nueva versión sin perder tu sesión.</li>
+          <li><b>🎯 Probabilidad de Captura en Vivo, ⚡ Captura Crítica y ⛓️ Cadena Shiny:</b> porcentaje real de captura con tu Ball actual y botón directo en el objetivo, efectos visuales de ¡CAPTURA CRÍTICA!, textos flotantes de +EXP y +Esencia, radar con distancia en metros y resumen de bonificaciones en Mejoras [U].</li>
+          <li><b>⇄ Sustitución Directa en Equipo [T], Subida "+5 Nv", Venta Rápida en Mochila [I] y Buscador en Mapa [M]:</b> ficha con origen y fecha de captura (📍), subida de 5 niveles con caramelos, cambio directo por cualquier titular con equipo lleno ("⇄ Sustituir por"), venta rápida desde la mochila en pueblos y buscador de especies/tipos por zona en el Mapa.</li>
+          <li><b>⇄ Intercambios en Vivo, 🏆 Salón de la Fama, 🎁 Racha Diaria, ⭐ Favoritos, ✏ Motes y 💰 Venta en Tienda:</b> intercambia hasta 6 Pokémon y Pokédólares (evolucionando a Kadabra, Graveler, Haunter y Machoke), consulta el ranking global en Social [O], reclama tu racha diaria de 7 días en Misiones [J], personaliza motes y favoritos en Equipo [T] y vende objetos en la Tienda.</li>
+          <li><b>91 especies en 3D con Poses de Ataque Elementales (11.648 fotogramas):</b> las 91 especies (incluidos Raikou, Entei, Suicune, Lugia, Ho-Oh, Rayquaza, Celebi, Jirachi, Darkrai, Mareep, Hoppip, Wooper, Murkrow, Misdreavus, Sneasel, Swinub, Houndour y Togepi) lucen efectos elementales 3D auto-iluminados al atacar, con filtros de categoría y botón "🎲 Azar" en el Atelier.</li>
+          <li><b>Modelo del Entrenador y PNJs Icónicos + 👕 Vestidor en Vivo:</b> entrenadores con zapatillas y mochila a juego, pulsera Rush-Band luminosa, tirador dorado de cremallera, Enfermera Joy con delantal blanco y bucles, Profesor Oak con bata y corbata, Blaine con gafas de sol, Lance con capa de Maestro Dragón y Vestidor en vivo en Ajustes.</li>
+          <li><b>Pokédex con Filtros Inteligentes y Ruta Rápida ("⌖ Ir"):</b> filtra por Capturados, Faltan, ✦ Shiny, ★ Leyendas o Estación actual y marca el hábitat en tu brújula con un clic.</li>
+        </ul>
+      </details>
+    </section>
+
+    <div class="cols">
+      <section class="card" id="feedbox"><h2>Últimos momentos épicos</h2><ul id="feed" class="feed"><li class="muted">Todavía no hay eventos.</li></ul></section>
+      <section class="card"><h2>Servidores</h2><div id="servers" class="servers"><p class="muted">Sin datos.</p></div></section>
+    </div>
+  </main>
+
+  <dialog id="profile"><div id="pbody"></div><form method="dialog"><button class="btn small">Cerrar</button></form></dialog>
+
+  <footer class="wrap foot">Juego de fans sin ánimo de lucro. Pokémon es una marca de Nintendo / Game Freak / The Pokémon Company. Datos servidos por Cloudflare Workers + D1.</footer>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "name": "pokemon-rush-world-web",
+  "version": "2.5.0",
+  "private": true,
+  "description": "Cloudflare Worker + D1: estadísticas, ranking y copias de seguridad de Pokémon Rush World",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:init": "wrangler d1 execute prw --remote --file=schema.sql",
+    "db:init:local": "wrangler d1 execute prw --local --file=schema.sql"
+  },
+  "devDependencies": {
+    "wrangler": "^4.40.0"
+  }
+}

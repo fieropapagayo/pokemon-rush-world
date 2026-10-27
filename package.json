@@ -1,0 +1,42 @@
+{
+  "name": "pokemon-rush-world",
+  "version": "2.9.0",
+  "private": true,
+  "type": "module",
+  "description": "Pokémon Rush World - RPG incremental multijugador pixel art en navegador (fan game no oficial)",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "build": "vite build",
+    "start": "tsx server/index.ts",
+    "dev:server": "tsx watch server/index.ts",
+    "check": "tsc --noEmit -p tsconfig.json",
+    "db:check": "tsx server/database/check.ts",
+    "test:bots": "tsx scripts/bot-test.ts",
+    "test:models": "tsx scripts/models-test.ts",
+    "test:encounters": "tsx scripts/encounters-test.ts",
+    "test:exploration": "tsx scripts/exploration-test.ts",
+    "test:world": "tsx scripts/world-check.ts",
+    "test:gameplay": "tsx scripts/gameplay-test.ts",
+    "test:cloud": "tsx scripts/cloud-test.ts",
+    "test:weather": "tsx scripts/weather-test.ts",
+    "test:google": "tsx scripts/google-test.ts",
+    "test:mechanics": "tsx scripts/mechanics-test.ts",
+    "test:visuals": "tsx scripts/visuals-test.ts",
+    "preview:visuals": "tsx scripts/visuals-preview.ts"
+  },
+  "dependencies": {
+    "@fontsource/pixelify-sans": "^5.2.0",
+    "@fontsource/press-start-2p": "^5.2.0",
+    "phaser": "3.90.0",
+    "tsx": "^4.20.0",
+    "vite": "^6.4.5",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/ws": "^8.18.1",
+    "typescript": "^5.9.3"
+  }
+}

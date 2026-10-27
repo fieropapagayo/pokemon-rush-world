@@ -1,0 +1,9 @@
+node_modules
+dist
+data
+.env
+.claude
+web
+artifacts
+*.db
+*.log

@@ -1,0 +1,25 @@
+# Despliegue del servidor de juego en Render (https://render.com), plan gratuito.
+# El juego queda siempre en Internet sin tu PC: la web de Cloudflare lo despierta cada 10 minutos
+# y las partidas se guardan y recuperan desde la nube (Cloudflare D1), así que no se pierden aunque Render reinicie.
+services:
+  - type: web
+    name: pokemon-rush-world
+    runtime: docker
+    plan: free
+    region: frankfurt
+    healthCheckPath: /health
+    envVars:
+      - key: HOST
+        value: 0.0.0.0
+      - key: DB_FILE
+        value: /tmp/pokemon-rush.db
+      - key: TUNNEL
+        value: "false"
+      - key: CLOUD_URL
+        value: https://pokemon-rush-world.pokemonrush.workers.dev
+      - key: CLOUD_KEY
+        sync: false          # pega aquí el valor de CLOUD_KEY de tu .env (en el panel de Render)
+      - key: SERVER_NAME
+        value: Pokémon Rush World (nube)
+      - key: CLOUD_SERVER_ID
+        value: nube
