@@ -255,7 +255,16 @@ export class Hud {
     bus.on('zone', (z: number) => this.zoneBanner(z));
     bus.on('hurt', () => { this.els.vig.classList.add('hurt'); setTimeout(() => this.els.vig.classList.remove('hurt'), 160); });
     bus.on('danger', () => { this.els.vig.classList.add('danger'); clearTimeout((this as any)._dt); (this as any)._dt = setTimeout(() => this.els.vig.classList.remove('danger'), 450); });
-    bus.on('cycle_ball', () => { const have = BALLS.filter(b => (S.core?.items[b] || 0) > 0); if (!have.length) return; const i = have.indexOf(S.settings.ball); S.settings.ball = have[(i + 1) % have.length]; saveSettings(); this.renderActions(); });
+    bus.on('cycle_ball', () => {
+      const have = BALLS.filter(b => (S.core?.items[b] || 0) > 0);
+      if (!have.length) { this.toast('No tienes Poké Balls disponibles en la mochila.', 'info'); return; }
+      const i = have.indexOf(S.settings.ball);
+      S.settings.ball = have[(i + 1) % have.length];
+      saveSettings();
+      audio.play('ui');
+      this.toast('Ball activa [B]: ' + ITEMS[S.settings.ball].name, 'good');
+      this.renderActions();
+    });
     bus.on('snap', () => { this.renderTeam(); this.renderTarget(); this.renderBoss(); });
     bus.on('streak', (n: number) => { (this as any)._streak = n; (this as any)._streakAt = Date.now(); this.refreshCore(); });
   }
@@ -344,7 +353,8 @@ export class Hud {
       const frac = t.mhp ? t.hp / t.mhp : 0;
       const canEvo = (sp.evo || []).some(e => e.level && t.lvl >= e.level);
       const dispName = ms.nick ? `${ms.nick} (${sp.name})` : sp.name;
-      html += `<div class="tslot ${t.revive >= 0 ? 'fainted' : ''}" data-uid="${t.uid}" title="${ms.fav ? '⭐ ' : ''}${esc(dispName)} Nv.${t.lvl} — ${Math.ceil(t.hp)}/${t.mhp} PS${t.status ? ' · ' + STATUS_NAMES[t.status] : ''}">
+      const isDanger = t.revive < 0 && frac > 0 && frac < 0.25;
+      html += `<div class="tslot ${t.revive >= 0 ? 'fainted' : isDanger ? 'low-hp' : ''}" data-uid="${t.uid}" title="${ms.fav ? '⭐ ' : ''}${esc(dispName)} Nv.${t.lvl} — ${Math.ceil(t.hp)}/${t.mhp} PS${t.status ? ' · ' + STATUS_NAMES[t.status] : ''}">
         <img src="${monURL(ms.sp, ms.shiny, 2)}"><span class="lvl">${t.lvl}</span>${ms.shiny ? '<span class="shiny">✦</span>' : ms.fav ? '<span class="shiny" style="color:#ffd866">★</span>' : ''}${canEvo ? '<span class="evo">EVO</span>' : ''}
         ${t.revive >= 0 ? `<span class="rev">${Math.ceil(t.revive / 1000)}s</span>` : ''}
         <div class="bar hp ${frac < 0.25 ? 'low' : frac < 0.5 ? 'mid' : ''}"><i style="width:${frac * 100}%"></i></div></div>`;
@@ -371,7 +381,7 @@ export class Hud {
     this.lastStance = S.me.stance;
     (this.els.actions.querySelector('#flee') as HTMLElement).onclick = () => net.send({ t: 'flee' });
     const revBtn = this.els.actions.querySelector('#userev') as HTMLElement | null;
-    if (revBtn) revBtn.onclick = () => net.send({ t: 'use', item: 'revivir' });
+    if (revBtn) revBtn.onclick = () => { net.send({ t: 'use', item: 'revivir' }); audio.play('heal', { pitch: 1.25 }); };
     const campBtn = this.els.actions.querySelector('#usecamp') as HTMLElement | null;
     if (campBtn) campBtn.onclick = () => net.send({ t: 'camp' });
     const incBtn = this.els.actions.querySelector('#useinc') as HTMLElement | null;

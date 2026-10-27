@@ -357,7 +357,7 @@ export class Panels {
       <div class="row"><div class="col" style="align-items:center"><img id="team3d" class="px" src="${monURL(m.sp, m.shiny, 3, this.viewDir, this.currentFrame())}" style="width:144px;height:144px;background:#0003;border-radius:6px;transition:transform .2s ease">${this.controls3D()}</div>
         <div class="col" style="gap:3px">
           <div class="row" style="gap:4px;flex-wrap:wrap"><span style="font-size:19px">${m.shiny ? '<span class="gold">✦ </span>' : ''}${m.nick ? `${esc(m.nick)} <span class="muted" style="font-size:13px">(${esc(sp.name)})</span>` : esc(sp.name)} <span class="muted">#${String(sp.dex).padStart(3, '0')}</span></span></div>
-          <div class="row" style="gap:4px;flex-wrap:wrap"><button class="btn tiny ${m.fav ? 'gold' : 'gray'}" data-act="fav" title="Proteger como Favorito">${m.fav ? '⭐ Favorito' : '☆ Favorito'}</button><button class="btn tiny gray" data-act="nick" title="Poner o cambiar mote">✏ Mote</button><button class="btn tiny" data-act="pet" style="background:#ff5c8a;color:#fff;border-color:#000" title="Acariciar a tu Pokémon">♥ Acariciar</button>${m.ot ? `<span class="tag" style="background:#2a3a58;color:#a8d8ff;font-size:10px" title="Intercambiado con ${esc(m.ot)}">EO: ${esc(m.ot)}</span>` : ''}</div>
+          <div class="row" style="gap:4px;flex-wrap:wrap"><button class="btn tiny ${m.fav ? 'gold' : 'gray'}" data-act="fav" title="Proteger como Favorito">${m.fav ? '⭐ Favorito' : '☆ Favorito'}</button><button class="btn tiny gray" data-act="nick" title="Poner o cambiar mote">✏ Mote</button><button class="btn tiny" data-act="pet" style="background:#ff5c8a;color:#fff;border-color:#000" title="Acariciar a tu Pokémon">♥ Acariciar</button><button class="btn tiny gray" data-act="cry" title="Escuchar su grito retro">🔊 Grito</button>${m.ot ? `<span class="tag" style="background:#2a3a58;color:#a8d8ff;font-size:10px" title="Intercambiado con ${esc(m.ot)}">EO: ${esc(m.ot)}</span>` : ''}</div>
           <div>${sp.types.map(typeTag).join('')} <span class="tag" style="background:${RARITY_COLORS[sp.rarity]};color:#000">${RARITY_NAMES[sp.rarity]}</span></div>
           <div>Nivel <b>${m.lvl}</b> · Amistad ${hearts} <span class="muted" style="font-size:11px">(${m.fr}/255)</span> · <b class="gold">PC ${monCP(sp, m.lvl, m.iv)}</b> ${ivBadge} ${natTag}</div>
           <div class="bar xp" style="width:160px"><i style="width:${Math.min(100, (m.xp - a) / Math.max(1, b - a) * 100)}%"></i></div>
@@ -416,6 +416,7 @@ export class Panels {
         else this.hud.toast(`♥ ¡A ${ms.nick || SPECIES[ms.sp].name} le encanta que lo acaricies! (Amistad: ${ms.fr}/255)`, 'gold');
         return;
       }
+      if (a === 'cry' && ms) { audio.cry(SPECIES[ms.sp].dex - 1); return; }
       if (a === 'equip') {
         const slots = teamSlotsFor(c.tlvl);
         let team = [...c.team];
@@ -482,7 +483,7 @@ export class Panels {
         <div class="col" style="gap:3px"><div style="font-size:19px">#${String(sel.dex).padStart(3, '0')} ${isS ? esc(sel.name) : '???'}</div>
         ${isS ? `<div>${sel.types.map(typeTag).join('')}</div><div class="row" style="gap:4px;flex-wrap:wrap"><span class="tag" style="background:${RARITY_COLORS[sel.rarity]};color:#000">${RARITY_NAMES[sel.rarity]}</span><span class="tag" style="background:#253048;color:#f0e080;font-size:11px">BST ${bst.hp + bst.atk + bst.def + bst.spd}</span><span class="muted" style="font-size:12px">Ratio ${sel.catchRate}</span></div>` : ''}
         <div class="muted" style="font-size:12px">${isC ? `Capturados: ${d.caught[sel.key]}${d.shiny[sel.key] ? ` · Shiny: ${d.shiny[sel.key]}` : ''}` : isS ? 'Visto, aún no capturado' : 'Desconocido'}</div>
-        <div class="row" style="gap:4px;flex-wrap:wrap">${d.shiny[sel.key] ? `<button class="btn tiny gold" id="dshiny">${this.dexShiny ? 'Ver normal' : 'Ver shiny ✦'}</button>` : ''}${ownedMons.length ? `<button class="btn tiny gray" id="dexbox" title="Ver tus ejemplares de ${esc(sel.name)} en Equipo [T]">◓ En Caja (${ownedMons.length})</button>` : ''}</div>
+        <div class="row" style="gap:4px;flex-wrap:wrap">${isS ? `<button class="btn tiny gray" id="dcry" title="Escuchar su grito retro">🔊 Grito</button>` : ''}${d.shiny[sel.key] ? `<button class="btn tiny gold" id="dshiny">${this.dexShiny ? 'Ver normal' : 'Ver shiny ✦'}</button>` : ''}${ownedMons.length ? `<button class="btn tiny gray" id="dexbox" title="Ver tus ejemplares de ${esc(sel.name)} en Equipo [T]">◓ En Caja (${ownedMons.length})</button>` : ''}</div>
         </div></div>
         ${isS ? `<div class="hr"></div><div style="font-size:12px">${esc(sel.desc)}</div><div class="hr"></div>${typeMatchupHtml(sel.types)}<div class="hr"></div>
         <div class="stat"><span>PS</span><div class="bar"><i style="width:${bst.hp / 1.6}%;background:#58e070"></i></div><span>${bst.hp}</span></div>
@@ -562,6 +563,7 @@ export class Panels {
       else audio.play('ui');
       this.renderDex(body);
     });
+    const dc = body.querySelector('#dcry') as HTMLElement | null; if (dc && sel) dc.onclick = () => audio.cry(sel.dex - 1);
     const sb = body.querySelector('#dshiny') as HTMLElement | null; if (sb) sb.onclick = () => { this.dexShiny = !this.dexShiny; audio.play('sparkle'); this.renderDex(body); };
     const dbx = body.querySelector('#dexbox') as HTMLElement | null;
     if (dbx && sel) dbx.onclick = () => {
@@ -635,9 +637,9 @@ export class Panels {
     const shBtn = body.querySelector('#inv-shop') as HTMLElement | null;
     if (shBtn) shBtn.onclick = () => this.open('shop');
     body.querySelectorAll<HTMLElement>('[data-rare]').forEach(b => b.onclick = () => {
-      const leader = S.mons[0];
-      if (leader) net.send({ t: 'use', item: 'caramelo_raro', uid: leader.uid });
-      else this.open('team');
+      this.close('inv');
+      this.open('team');
+      this.hud.toast('Selecciona el Pokémon que quieras subir de nivel con Caramelo Raro.', 'info');
     });
   }
 

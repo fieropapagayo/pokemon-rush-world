@@ -6,6 +6,16 @@ import { audio } from '../systems/audio';
 
 const HISTORY: { ver: string; date: string; items: string[] }[] = [
   {
+    ver: '2.11 · Feedback Táctico y Salud de Equipo',
+    date: '27 de octubre de 2026',
+    items: [
+      'Alerta visual en el HUD: ranuras de equipo con pulso luminoso ámbar/rojo al caer por debajo del 25% de vida, facilitando la reacción con la tecla [Q].',
+      'Botones de reproducción directa "🔊 Grito" en la ficha de cada Pokémon en el Equipo [T] y en la Pokédex [P].',
+      'Confirmación auditiva y aviso discreto en pantalla al alternar Poké Balls con [B] o cambiar el modo de equipo con [V].',
+      'Flujo seguro para Caramelo Raro desde la Mochila [I] redirigiendo interactivamente al panel de Equipo.',
+    ],
+  },
+  {
     ver: '2.10 · Feedback de Combate y Control Táctico',
     date: '27 de octubre de 2026',
     items: [

@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.11.0 · Feedback Táctico y Salud de Equipo — 27 de octubre de 2026
+
+- **🩺 Alerta Visual de Salud Crítica en el HUD (`hud.ts`, `v24.css`)**: las ranuras del equipo en peligro de debilitarse (<25% PS) muestran un pulso luminoso ámbar-rojo suave, advirtiendo al entrenador para usar el atajo rápido de curación `[Q]`.
+- **🔊 Botón Directo de Grito Procedural Retro (`panels.ts`)**: botón `🔊 Grito` en la Pokédex [P] y en la ficha del Pokémon en Equipo [T] para escuchar el grito retro chiptune sintetizado en 8-bit.
+- **⚡ Feedback Auditivo y Avisos Tácticos para [B] y [V] (`hud.ts`)**: confirmación sonora inmediata y notificación discreta en pantalla al cambiar de Poké Ball equipada (`[B]`) o al rotar el modo táctico del equipo (`[V]`).
+- **🍬 Uso Seguro de Caramelo Raro desde Mochila (`panels.ts`)**: al pulsar "Usar" en un Caramelo Raro desde la Mochila [I], se abre directamente el panel de Equipo con indicación en pantalla para seleccionar al Pokémon destinatario sin riesgo de asignación accidental.
+
 ## 2.11.0 · Rutas, Pueblos y Modelos — 27 de octubre de 2026
 
 ### Localizar, mucho más fácil

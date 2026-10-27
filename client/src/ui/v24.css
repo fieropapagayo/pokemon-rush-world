@@ -258,3 +258,15 @@
 .buff-pill.xp { color: #ffe060; border-color: #ffe06088; background: linear-gradient(135deg, #3d340c, #1a1604); }
 .buff-pill.incense { color: #a0f0ff; border-color: #60d0ff88; background: linear-gradient(135deg, #0c2c3d, #04141c); }
 .buff-pill.link { color: #ff9830; border-color: #ffaa4088; background: linear-gradient(135deg, #3d200c, #1c0e04); }
+
+
+/* Ranura de equipo en peligro (vida baja) */
+.tslot.low-hp {
+  border-color: #ff4848 !important;
+  box-shadow: 0 0 8px rgba(255, 72, 72, 0.55);
+  animation: tslot-lowhp 1.1s infinite ease-in-out;
+}
+@keyframes tslot-lowhp {
+  0%, 100% { border-color: #ff4848; box-shadow: 0 0 5px rgba(255, 72, 72, 0.4); }
+  50% { border-color: #ff9933; box-shadow: 0 0 10px rgba(255, 153, 51, 0.7); }
+}

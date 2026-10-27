@@ -1,5 +1,6 @@
-export const RELEASE = '2.11.0 · Rutas, Pueblos y Modelos';
+export const RELEASE = '2.11.0 · Feedback Táctico y Salud de Equipo';
 export const CHANGELOG = [
+  '🩺 Alerta de Salud Crítica en HUD, Botón de Grito Retro 🔊 y Avisos de Control Táctico [B] y [V]: pulso visual ámbar/rojo en las ranuras del equipo en peligro (<25% PS) para activar la curación rápida [Q]; botones directos de "🔊 Grito" procedural en la Pokédex y en la ficha de cada Pokémon; confirmación auditiva y toast discreto al alternar Poké Balls [B] y modos de postura [V]; y uso guiado de Caramelo Raro desde la Mochila hacia el Equipo.',
   '🧭 Ruta guiada: al marcar un destino (mapa, guía, jefes, gimnasios) se calcula el camino real por todo el mapa y se dibuja con flechas doradas animadas en el suelo, en el minimapa y en el mapa del mundo. La brújula muestra metros y minutos a pie, ▶ para caminar solo y × para quitarlo; faro de luz en el destino y flecha en el borde de la pantalla.',
   '🏡 Pueblos rehechos al doble de resolución: casas con vigas de madera, contraventanas, jardineras en las ventanas, chimenea de ladrillo, tejas escalonadas y zócalo de piedra; Centro Pokémon con emblema y rótulo nuevos; Tienda con toldo de rayas; adoquines cálidos con musgo; setos, bancos, vallas blancas, macizos de flores y jardines en las esquinas.',
   '🌸 Jardineras nuevas: arriates redondos con borde de piedras, matas de hojas y flores de cinco pétalos en cuatro combinaciones (rosas, azules, girasoles y fucsias).',
